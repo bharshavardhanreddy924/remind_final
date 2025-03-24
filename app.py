@@ -13,6 +13,8 @@ try:
     import numpy as np
     import re
     import certifi
+    from flask import g
+
 except ImportError as e:
     print(f"Import error: {str(e)}")
     print("Please make sure all required packages are installed by running: pip install -r requirements.txt")
