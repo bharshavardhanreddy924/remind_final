@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Patient{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex align-items-center">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary me-3">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            <h1 class="mb-0">Manage: {{ patient.name }}</h1>
+        </div>
+        <p class="text-muted">{{ patient.email }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <ul class="nav nav-tabs card-header-tabs" id="patientTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="true">
+                            <i class="fas fa-info-circle me-1"></i> Personal Info
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tasks-tab" data-bs-toggle="tab" data-bs-target="#tasks" type="button" role="tab" aria-controls="tasks" aria-selected="false">
+                            <i class="fas fa-tasks me-1"></i> Tasks
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="medications-tab" data-bs-toggle="tab" data-bs-target="#medications" type="button" role="tab" aria-controls="medications" aria-selected="false">
+                            <i class="fas fa-pills me-1"></i> Medications
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="notes-tab" data-bs-toggle="tab" data-bs-target="#notes" type="button" role="tab" aria-controls="notes" aria-selected="false">
+                            <i class="fas fa-sticky-note me-1"></i> Notes
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="patientTabContent">
+                    <!-- Personal Info Tab -->
+                    <div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="info-tab">
+                        <h4 class="mb-3">Personal Information</h4>
+                        <p class="text-muted mb-4">Update the patient's personal information to improve AI Assistant responses and personalized care.</p>
+                        
+                        <form action="{{ url_for('update_patient_info', patient_id=patient._id) }}" method="POST">
+                            <div class="mb-3">
+                                <label for="personal_info" class="form-label">Personal Information</label>
+                                <textarea class="form-control" id="personal_info" name="personal_info" rows="6" placeholder="Enter patient's personal information, background, and preferences">{{ patient.personal_info }}</textarea>
+                                <div class="form-text">Include details like birth date, family members, hobbies, preferred routines, and important memories.</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Update Information
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- Tasks Tab -->
+                    <div class="tab-pane fade" id="tasks" role="tabpanel" aria-labelledby="tasks-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Tasks</h4>
+                        </div>
+                        
+                        <form action="{{ url_for('add_patient_task', patient_id=patient._id) }}" method="POST" class="mb-4">
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="task_text" placeholder="Add a new task" required>
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="fas fa-plus me-1"></i> Add Task
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div class="list-group mb-4">
+                            {% if tasks %}
+                                {% for task in tasks %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            {% if task.completed %}
+                                                <i class="fas fa-check-circle text-success me-2"></i>
+                                                <span class="text-muted"><del>{{ task.text }}</del></span>
+                                            {% else %}
+                                                <i class="far fa-circle me-2"></i>
+                                                <span>{{ task.text }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4 text-muted">
+                                    <i class="fas fa-tasks fa-2x mb-2"></i>
+                                    <p>No tasks added yet</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Medications Tab -->
+                    <div class="tab-pane fade" id="medications" role="tabpanel" aria-labelledby="medications-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Medications</h4>
+                        </div>
+                        
+                        <form action="{{ url_for('add_patient_medication', patient_id=patient._id) }}" method="POST" class="mb-4">
+                            <div class="row">
+                                <div class="col">
+                                    <input type="text" class="form-control" name="med_name" placeholder="Medication name" required>
+                                </div>
+                                <div class="col">
+                                    <input type="text" class="form-control" name="med_time" placeholder="Time (e.g. 08:00 AM)" required>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i> Add
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <div class="list-group mb-4">
+                            {% if medications %}
+                                {% for med in medications %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-prescription-bottle-alt text-primary me-2"></i>
+                                            <strong>{{ med.name }}</strong>
+                                            <span class="text-muted ms-2">{{ med.time }}</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-4 text-muted">
+                                    <i class="fas fa-prescription-bottle fa-2x mb-2"></i>
+                                    <p>No medications added yet</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Notes Tab -->
+                    <div class="tab-pane fade" id="notes" role="tabpanel" aria-labelledby="notes-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">Notes</h4>
+                        </div>
+                        
+                        <form action="{{ url_for('update_patient_notes', patient_id=patient._id) }}" method="POST">
+                            <div class="mb-3">
+                                <textarea class="form-control" id="content" name="content" rows="10" placeholder="Enter notes about the patient">{{ notes_content }}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Save Notes
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

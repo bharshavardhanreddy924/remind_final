@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Assistant{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="fw-bold">
+            <a href="{{ url_for('dashboard') }}" class="text-decoration-none">
+                <i class="fas fa-arrow-left me-2"></i>
+            </a>
+            AI Memory Assistant
+        </h1>
+        <p class="text-muted">Ask me anything about your personal information</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Memory Assistant</h5>
+    </div>
+    <div class="card-body">
+        <div class="text-center mb-4">
+            <i class="fas fa-robot fa-4x text-primary"></i>
+            <h4 class="mt-3">Your Personal Memory Assistant</h4>
+            <p>I can help answer questions about your personal information and memories.</p>
+        </div>
+        
+        <div id="chat-container" class="chat-container">
+            <div id="chat-messages">
+                <div class="chat-message assistant-message">
+                    Hello {{ user.name }}! I'm your AI memory assistant. How can I help you today?
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input mt-3">
+            <div class="input-group">
+                <input type="text" id="user-input" class="form-control form-control-lg" placeholder="Type your question...">
+                <button class="btn btn-primary" id="send-button">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <p class="text-muted">Sample questions:</p>
+            <div class="d-flex flex-wrap">
+                <button class="btn btn-outline-primary btn-sm me-2 mb-2 quick-question">What's my name?</button>
+                <button class="btn btn-outline-primary btn-sm me-2 mb-2 quick-question">How old am I?</button>
+                <button class="btn btn-outline-primary btn-sm me-2 mb-2 quick-question">Where do I live?</button>
+                <button class="btn btn-outline-primary btn-sm me-2 mb-2 quick-question">What are my hobbies?</button>
+                <button class="btn btn-outline-primary btn-sm me-2 mb-2 quick-question">Tell me about myself</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">About Your AI Assistant</h5>
+    </div>
+    <div class="card-body">
+        <p>Your AI memory assistant is trained on personal information about you, helping to reinforce memories and provide helpful responses.</p>
+        <p>This assistant can answer questions about your:</p>
+        <ul>
+            <li>Personal information (name, age, etc.)</li>
+            <li>Background and history</li>
+            <li>Family and relationships</li>
+            <li>Interests and hobbies</li>
+            <li>Daily routines and preferences</li>
+        </ul>
+        <p><strong>Note:</strong> Your caretaker can update this information for more personalized responses.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const chatContainer = document.getElementById('chat-container');
+        
+        // Quick question buttons
+        document.querySelectorAll('.quick-question').forEach(button => {
+            button.addEventListener('click', function() {
+                const questionText = this.textContent;
+                userInput.value = questionText;
+                sendMessage();
+            });
+        });
+        
+        // Send button click handler
+        sendButton.addEventListener('click', sendMessage);
+        
+        // Enter key handler
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        function sendMessage() {
+            const userMessage = userInput.value.trim();
+            if (userMessage === '') return;
+            
+            // Add user message to chat
+            addMessage(userMessage, 'user');
+            
+            // Clear input
+            userInput.value = '';
+            
+            // Show typing indicator
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'chat-message assistant-message typing-indicator';
+            typingIndicator.textContent = 'Thinking...';
+            chatMessages.appendChild(typingIndicator);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Send request to server
+            fetch('{{ url_for('ai_response') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ prompt: userMessage })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Remove typing indicator
+                chatMessages.removeChild(typingIndicator);
+                
+                // Add AI response
+                addMessage(data.response, 'assistant');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Remove typing indicator
+                chatMessages.removeChild(typingIndicator);
+                
+                // Add error message
+                addMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+            });
+        }
+        
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+            messageDiv.textContent = text;
+            
+            chatMessages.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    });
+</script>
+{% endblock %} 

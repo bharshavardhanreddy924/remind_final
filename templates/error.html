@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Error{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="alert alert-danger text-center">
+        <h2><i class="fas fa-exclamation-triangle"></i> Error</h2>
+        <p class="lead">{{ message }}</p>
+        <hr>
+        <p>Please try again later or contact support.</p>
+        <a href="{{ url_for('login') }}" class="btn btn-primary">Back to Login</a>
+    </div>
+</div>
+{% endblock %} 

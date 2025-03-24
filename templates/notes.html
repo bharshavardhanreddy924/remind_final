@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Notes{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="fw-bold">
+            <a href="{{ url_for('dashboard') }}" class="text-decoration-none">
+                <i class="fas fa-arrow-left me-2"></i>
+            </a>
+            My Notes
+        </h1>
+        <p class="text-muted">Important information and reminders</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Notes</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('notes') }}">
+            <div class="mb-3">
+                <textarea class="form-control" id="content" name="content" rows="15">{{ content }}</textarea>
+            </div>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i> Save Notes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Note Taking Tips -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Note Taking Tips</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="d-flex">
+                    <div class="me-3 text-primary">
+                        <i class="fas fa-clipboard-list fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5>Important Events</h5>
+                        <p>Keep track of appointments, family visits, and important dates.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex">
+                    <div class="me-3 text-primary">
+                        <i class="fas fa-lightbulb fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5>Memory Cues</h5>
+                        <p>Write down details that help jog your memory about places and people.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex">
+                    <div class="me-3 text-primary">
+                        <i class="fas fa-check-double fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5>Daily Routine</h5>
+                        <p>Note your daily routines and any changes to help maintain consistent habits.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-save functionality (every 30 seconds)
+    document.addEventListener('DOMContentLoaded', function() {
+        const contentTextarea = document.getElementById('content');
+        let lastSavedContent = contentTextarea.value;
+        
+        // Set up autosave interval
+        setInterval(function() {
+            if (contentTextarea.value !== lastSavedContent) {
+                const form = contentTextarea.closest('form');
+                const formData = new FormData(form);
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }).then(function(response) {
+                    if (response.ok) {
+                        lastSavedContent = contentTextarea.value;
+                        console.log('Notes auto-saved');
+                    }
+                });
+            }
+        }, 30000); // 30 seconds
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,568 @@
+{% extends 'base.html' %}
+
+{% block title %}Memory Training{% endblock %}
+
+{% block extra_css %}
+<style>
+    .game-card {
+        height: 200px;
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .game-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+    
+    .game-card i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+    
+    .memory-game-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+    
+    .memory-grid-cell {
+        aspect-ratio: 1 / 1;
+        background-color: #f0f0f0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .memory-grid-cell.active {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .memory-grid-cell.error {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    #gameMessage {
+        font-size: 1.2rem;
+        margin: 20px 0;
+        font-weight: 600;
+    }
+    
+    #startButton {
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="fw-bold">
+            <a href="{{ url_for('dashboard') }}" class="text-decoration-none">
+                <i class="fas fa-arrow-left me-2"></i>
+            </a>
+            Memory Training
+        </h1>
+        <p class="text-muted">Exercise your brain with these memory games</p>
+    </div>
+</div>
+
+<!-- Games Selection -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-4">
+        <div id="patternGameCard" class="game-card bg-white" onclick="startPatternGame()">
+            <i class="fas fa-th text-primary"></i>
+            <h4>Pattern Memory</h4>
+            <p class="text-muted text-center">Remember and repeat patterns</p>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div id="numberGameCard" class="game-card bg-white" onclick="startNumberGame()">
+            <i class="fas fa-sort-numeric-up text-success"></i>
+            <h4>Number Recall</h4>
+            <p class="text-muted text-center">Remember sequences of numbers</p>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div id="wordGameCard" class="game-card bg-white" onclick="startWordGame()">
+            <i class="fas fa-font text-info"></i>
+            <h4>Word Memory</h4>
+            <p class="text-muted text-center">Recall words in the correct order</p>
+        </div>
+    </div>
+</div>
+
+<!-- Game Area -->
+<div id="gameArea" class="card d-none">
+    <div class="card-header">
+        <h5 id="gameTitle" class="mb-0">Game Title</h5>
+    </div>
+    <div class="card-body">
+        <p id="gameInstructions" class="mb-3">Game instructions will appear here.</p>
+        
+        <div class="text-center mb-3">
+            <h5 id="gameMessage" class="mb-0">Watch the pattern!</h5>
+        </div>
+        
+        <!-- Pattern Game Grid -->
+        <div id="patternGameGrid" class="memory-game-grid mb-4 d-none">
+            <!-- Grid cells will be added via JavaScript -->
+        </div>
+        
+        <!-- Number Game -->
+        <div id="numberGameArea" class="d-none">
+            <div class="text-center mb-4">
+                <h3 id="numberDisplay" class="display-4"></h3>
+            </div>
+            <div id="numberInputArea" class="d-none">
+                <div class="form-group">
+                    <label for="numberInput">Enter the number you saw:</label>
+                    <input type="text" id="numberInput" class="form-control form-control-lg text-center" placeholder="Enter the number">
+                </div>
+                <div class="text-center mt-3">
+                    <button id="numberSubmitBtn" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Word Game -->
+        <div id="wordGameArea" class="d-none">
+            <div class="text-center mb-4">
+                <h3 id="wordDisplay" class="display-4"></h3>
+            </div>
+            <div id="wordInputArea" class="d-none">
+                <div class="form-group">
+                    <label for="wordInput">Enter the words in order (separated by spaces):</label>
+                    <input type="text" id="wordInput" class="form-control form-control-lg" placeholder="Enter the words">
+                </div>
+                <div class="text-center mt-3">
+                    <button id="wordSubmitBtn" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-3">
+            <button id="startButton" class="btn btn-primary">Start Game</button>
+            <button id="nextRoundButton" class="btn btn-success d-none">Next Round</button>
+            <button id="backToGamesButton" class="btn btn-secondary">Back to Games</button>
+        </div>
+        
+        <div class="mt-4">
+            <h6>Current Score: <span id="currentScore">0</span></h6>
+            <h6>High Score: <span id="highScore">0</span></h6>
+        </div>
+    </div>
+</div>
+
+<!-- Memory Tips -->
+<div class="card mt-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Memory Training Tips</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="d-flex">
+                    <div class="me-3 text-primary">
+                        <i class="fas fa-redo fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5>Regular Practice</h5>
+                        <p>Just like physical exercise, memory training is most effective when done regularly.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex">
+                    <div class="me-3 text-primary">
+                        <i class="fas fa-code-branch fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5>Association</h5>
+                        <p>Connect new information to things you already know well for better recall.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="d-flex">
+                    <div class="me-3 text-primary">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5>Challenge Yourself</h5>
+                        <p>Gradually increase difficulty as you improve to maximize benefits.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Game variables
+    let currentGame = "";
+    let patternArray = [];
+    let userPattern = [];
+    let currentRound = 1;
+    let score = 0;
+    let highScores = {
+        pattern: 0,
+        number: 0,
+        word: 0
+    };
+    
+    // DOM Elements
+    const gameArea = document.getElementById('gameArea');
+    const gameTitle = document.getElementById('gameTitle');
+    const gameInstructions = document.getElementById('gameInstructions');
+    const gameMessage = document.getElementById('gameMessage');
+    const patternGameGrid = document.getElementById('patternGameGrid');
+    const numberGameArea = document.getElementById('numberGameArea');
+    const wordGameArea = document.getElementById('wordGameArea');
+    const startButton = document.getElementById('startButton');
+    const nextRoundButton = document.getElementById('nextRoundButton');
+    const backToGamesButton = document.getElementById('backToGamesButton');
+    const currentScoreDisplay = document.getElementById('currentScore');
+    const highScoreDisplay = document.getElementById('highScore');
+
+    // Hide all game areas initially
+    function hideAllGameAreas() {
+        patternGameGrid.classList.add('d-none');
+        numberGameArea.classList.add('d-none');
+        wordGameArea.classList.add('d-none');
+        document.getElementById('numberInputArea').classList.add('d-none');
+        document.getElementById('wordInputArea').classList.add('d-none');
+    }
+    
+    // Show game area
+    function showGameArea() {
+        gameArea.classList.remove('d-none');
+        hideAllGameAreas();
+        startButton.classList.remove('d-none');
+        nextRoundButton.classList.add('d-none');
+    }
+    
+    // Go back to game selection
+    backToGamesButton.addEventListener('click', function() {
+        gameArea.classList.add('d-none');
+        resetGame();
+    });
+    
+    // Reset the current game
+    function resetGame() {
+        patternArray = [];
+        userPattern = [];
+        currentRound = 1;
+        score = 0;
+        currentScoreDisplay.textContent = score;
+        gameMessage.textContent = "Watch the pattern!";
+        startButton.classList.remove('d-none');
+        nextRoundButton.classList.add('d-none');
+    }
+    
+    // ===================== Pattern Memory Game =====================
+    function startPatternGame() {
+        currentGame = "pattern";
+        showGameArea();
+        
+        // Set game title and instructions
+        gameTitle.textContent = "Pattern Memory";
+        gameInstructions.textContent = "Memorize the pattern of highlighted squares and then repeat it in the same order.";
+        highScoreDisplay.textContent = highScores.pattern;
+        
+        // Create the pattern grid
+        patternGameGrid.classList.remove('d-none');
+        patternGameGrid.innerHTML = '';
+        
+        for (let i = 0; i < 16; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'memory-grid-cell';
+            cell.dataset.index = i;
+            cell.addEventListener('click', handlePatternCellClick);
+            patternGameGrid.appendChild(cell);
+        }
+    }
+    
+    startButton.addEventListener('click', function() {
+        if (currentGame === "pattern") {
+            startPatternRound();
+        } else if (currentGame === "number") {
+            startNumberRound();
+        } else if (currentGame === "word") {
+            startWordRound();
+        }
+        
+        startButton.classList.add('d-none');
+    });
+    
+    nextRoundButton.addEventListener('click', function() {
+        nextRoundButton.classList.add('d-none');
+        
+        if (currentGame === "pattern") {
+            startPatternRound();
+        } else if (currentGame === "number") {
+            startNumberRound();
+        } else if (currentGame === "word") {
+            startWordRound();
+        }
+    });
+    
+    function startPatternRound() {
+        // Reset for this round
+        userPattern = [];
+        gameMessage.textContent = "Watch the pattern!";
+        
+        // Generate random pattern
+        patternArray = [];
+        for (let i = 0; i < currentRound + 2; i++) {
+            patternArray.push(Math.floor(Math.random() * 16));
+        }
+        
+        // Show pattern
+        let delay = 500;
+        patternArray.forEach((cellIndex, index) => {
+            setTimeout(() => {
+                const cell = patternGameGrid.children[cellIndex];
+                cell.classList.add('active');
+                setTimeout(() => {
+                    cell.classList.remove('active');
+                    
+                    // After showing the full pattern
+                    if (index === patternArray.length - 1) {
+                        setTimeout(() => {
+                            gameMessage.textContent = "Your turn! Repeat the pattern.";
+                        }, 300);
+                    }
+                }, 400);
+            }, delay * index);
+        });
+    }
+    
+    function handlePatternCellClick(e) {
+        if (gameMessage.textContent !== "Your turn! Repeat the pattern.") return;
+        
+        const clickedIndex = parseInt(e.target.dataset.index);
+        userPattern.push(clickedIndex);
+        
+        // Highlight the clicked cell
+        e.target.classList.add('active');
+        setTimeout(() => {
+            e.target.classList.remove('active');
+        }, 300);
+        
+        // Check if the click is correct
+        const currentIndex = userPattern.length - 1;
+        if (userPattern[currentIndex] !== patternArray[currentIndex]) {
+            gameOver();
+            return;
+        }
+        
+        // Check if the full pattern is completed
+        if (userPattern.length === patternArray.length) {
+            gameMessage.textContent = "Correct! Get ready for the next pattern.";
+            currentRound++;
+            score += patternArray.length;
+            currentScoreDisplay.textContent = score;
+            
+            if (score > highScores.pattern) {
+                highScores.pattern = score;
+                highScoreDisplay.textContent = highScores.pattern;
+            }
+            
+            nextRoundButton.classList.remove('d-none');
+        }
+    }
+    
+    function gameOver() {
+        gameMessage.textContent = "Game Over! Try again.";
+        resetGame();
+        startButton.classList.remove('d-none');
+    }
+    
+    // ===================== Number Memory Game =====================
+    function startNumberGame() {
+        currentGame = "number";
+        showGameArea();
+        
+        // Set game title and instructions
+        gameTitle.textContent = "Number Recall";
+        gameInstructions.textContent = "Memorize the number you see and enter it when prompted.";
+        highScoreDisplay.textContent = highScores.number;
+        
+        // Show the number game area
+        numberGameArea.classList.remove('d-none');
+    }
+    
+    function startNumberRound() {
+        const numberDisplay = document.getElementById('numberDisplay');
+        const numberInputArea = document.getElementById('numberInputArea');
+        const numberInput = document.getElementById('numberInput');
+        const numberSubmitBtn = document.getElementById('numberSubmitBtn');
+        
+        // Generate a random number based on the current round
+        const digitCount = Math.min(currentRound + 2, 10);  // Start with 3 digits, cap at 10
+        let randomNumber = "";
+        for (let i = 0; i < digitCount; i++) {
+            randomNumber += Math.floor(Math.random() * 10);
+        }
+        
+        // Display the number
+        numberDisplay.textContent = randomNumber;
+        gameMessage.textContent = "Remember this number!";
+        numberInputArea.classList.add('d-none');
+        
+        // After a delay, hide the number and show input
+        const displayTime = 2000 + (currentRound * 200);  // Longer display for higher rounds
+        setTimeout(() => {
+            numberDisplay.textContent = "";
+            gameMessage.textContent = "What was the number?";
+            numberInputArea.classList.remove('d-none');
+            numberInput.value = "";
+            numberInput.focus();
+        }, displayTime);
+        
+        // Handle submission
+        numberSubmitBtn.onclick = function() {
+            const userAnswer = numberInput.value.trim();
+            
+            if (userAnswer === randomNumber) {
+                gameMessage.textContent = "Correct! Get ready for the next number.";
+                currentRound++;
+                score += randomNumber.length;
+                currentScoreDisplay.textContent = score;
+                
+                if (score > highScores.number) {
+                    highScores.number = score;
+                    highScoreDisplay.textContent = highScores.number;
+                }
+                
+                numberInputArea.classList.add('d-none');
+                nextRoundButton.classList.remove('d-none');
+            } else {
+                gameMessage.textContent = `Game Over! The number was ${randomNumber}`;
+                numberInputArea.classList.add('d-none');
+                resetGame();
+                startButton.classList.remove('d-none');
+            }
+        };
+        
+        // Allow Enter key submission
+        numberInput.onkeypress = function(e) {
+            if (e.key === "Enter") {
+                numberSubmitBtn.click();
+            }
+        };
+    }
+    
+    // ===================== Word Memory Game =====================
+    function startWordGame() {
+        currentGame = "word";
+        showGameArea();
+        
+        // Set game title and instructions
+        gameTitle.textContent = "Word Memory";
+        gameInstructions.textContent = "Memorize the words you see and enter them in the same order when prompted.";
+        highScoreDisplay.textContent = highScores.word;
+        
+        // Show the word game area
+        wordGameArea.classList.remove('d-none');
+    }
+    
+    function startWordRound() {
+        const wordDisplay = document.getElementById('wordDisplay');
+        const wordInputArea = document.getElementById('wordInputArea');
+        const wordInput = document.getElementById('wordInput');
+        const wordSubmitBtn = document.getElementById('wordSubmitBtn');
+        
+        // Word lists
+        const words = [
+            "apple", "banana", "cherry", "dog", "elephant", "fish", "grape", 
+            "house", "ice", "jacket", "kite", "lemon", "mouse", "notebook", 
+            "orange", "pencil", "queen", "rabbit", "sun", "tree", "umbrella", 
+            "violin", "window", "xylophone", "yellow", "zebra"
+        ];
+        
+        // Generate a random sequence of words
+        const wordCount = Math.min(currentRound + 1, 8);  // Start with 2 words, cap at 8
+        let wordSequence = [];
+        for (let i = 0; i < wordCount; i++) {
+            wordSequence.push(words[Math.floor(Math.random() * words.length)]);
+        }
+        
+        // Display words one by one
+        wordInputArea.classList.add('d-none');
+        gameMessage.textContent = "Remember these words!";
+        
+        let wordIndex = 0;
+        wordDisplay.textContent = wordSequence[wordIndex];
+        
+        const wordInterval = setInterval(() => {
+            wordIndex++;
+            
+            if (wordIndex < wordSequence.length) {
+                wordDisplay.textContent = wordSequence[wordIndex];
+            } else {
+                clearInterval(wordInterval);
+                
+                // After showing all words
+                setTimeout(() => {
+                    wordDisplay.textContent = "";
+                    gameMessage.textContent = "Enter the words in order!";
+                    wordInputArea.classList.remove('d-none');
+                    wordInput.value = "";
+                    wordInput.focus();
+                }, 1000);
+            }
+        }, 1500);
+        
+        // Handle submission
+        wordSubmitBtn.onclick = function() {
+            const userAnswer = wordInput.value.trim().toLowerCase();
+            const correctAnswer = wordSequence.join(" ");
+            
+            if (userAnswer === correctAnswer) {
+                gameMessage.textContent = "Correct! Get ready for the next sequence.";
+                currentRound++;
+                score += wordSequence.length;
+                currentScoreDisplay.textContent = score;
+                
+                if (score > highScores.word) {
+                    highScores.word = score;
+                    highScoreDisplay.textContent = highScores.word;
+                }
+                
+                wordInputArea.classList.add('d-none');
+                nextRoundButton.classList.remove('d-none');
+            } else {
+                gameMessage.textContent = `Game Over! The words were: ${correctAnswer}`;
+                wordInputArea.classList.add('d-none');
+                resetGame();
+                startButton.classList.remove('d-none');
+            }
+        };
+        
+        // Allow Enter key submission
+        wordInput.onkeypress = function(e) {
+            if (e.key === "Enter") {
+                wordSubmitBtn.click();
+            }
+        };
+    }
+</script>
+{% endblock %} 

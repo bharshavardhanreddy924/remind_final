@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PWA Icon Generation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .note {
+            background-color: #ffffd0;
+            padding: 15px;
+            border-left: 4px solid #ffcc00;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>PWA Icon Generation Instructions</h1>
+    
+    <div class="note">
+        <strong>Note:</strong> You need to create actual icon files to make the PWA installable. This is a placeholder to remind you to create the required icon files.
+    </div>
+    
+    <h2>Required Icons</h2>
+    <p>For a properly functioning PWA, you'll need icons in these sizes:</p>
+    <ul>
+        <li>icon-72x72.png</li>
+        <li>icon-96x96.png</li>
+        <li>icon-128x128.png</li>
+        <li>icon-144x144.png</li>
+        <li>icon-152x152.png</li>
+        <li>icon-192x192.png</li>
+        <li>icon-384x384.png</li>
+        <li>icon-512x512.png</li>
+    </ul>
+    
+    <h2>Creating Icons</h2>
+    <p>You can use tools like:</p>
+    <ul>
+        <li><a href="https://www.pwabuilder.com/" target="_blank">PWA Builder</a></li>
+        <li><a href="https://app-manifest.firebaseapp.com/" target="_blank">Web App Manifest Generator</a></li>
+        <li><a href="https://maskable.app/" target="_blank">Maskable.app Editor</a> (for maskable icons)</li>
+    </ul>
+    
+    <h2>Quick Solution</h2>
+    <p>To quickly create a set of placeholder icons from a 512x512 source image, you can use this command:</p>
+    <pre>
+for size in 72 96 128 144 152 192 384 512; do
+    convert source-icon.png -resize ${size}x${size} icon-${size}x${size}.png
+done
+    </pre>
+    <p>If you're on Windows, consider using <a href="https://www.irfanview.com/" target="_blank">IrfanView</a> or <a href="https://www.gimp.org/" target="_blank">GIMP</a> for batch resizing.</p>
+</body>
+</html> 

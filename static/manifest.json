@@ -1,0 +1,22 @@
+{
+    "name": "MemoryCare",
+    "short_name": "MemoryCare",
+    "description": "A memory assistance app for those with memory impairments and their caretakers",
+    "start_url": "/splash?standalone=true",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#4E7ADC",
+    "theme_color": "#4E7ADC",
+    "orientation": "portrait",
+    "categories": ["health", "medical", "utilities"],
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "/static/images/icons/icon-512x512.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
+  

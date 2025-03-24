@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Caretaker Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-5 fw-bold">Caretaker Dashboard</h1>
+        <p class="lead text-muted">Manage your patients and their care plans</p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-users me-2"></i> My Patients</h5>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if patients %}
+            <div class="row">
+                {% for patient in patients %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="patient-avatar me-3 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-0">{{ patient.name }}</h5>
+                                        <p class="text-muted mb-0 small">{{ patient.email }}</p>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge bg-primary me-1">Patient</span>
+                                    {% if patient.notes %}
+                                        <span class="badge bg-success">Has Notes</span>
+                                    {% endif %}
+                                </div>
+                                <a href="{{ url_for('manage_patient', patient_id=patient._id) }}" class="btn btn-primary w-100">
+                                    <i class="fas fa-user-cog me-2"></i> Manage
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                <h4>No patients assigned yet</h4>
+                <p class="text-muted">You currently don't have any patients assigned to your care.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Caretaker Tips</h5>
+            </div>
+            <div class="card-body">
+                <div class="tip-item mb-3">
+                    <h5><i class="fas fa-calendar-check text-primary me-2"></i> Regular Check-ins</h5>
+                    <p>Set a consistent schedule for checking in with your patients. Regularity helps build trust and provides stability.</p>
+                </div>
+                <div class="tip-item">
+                    <h5><i class="fas fa-comments text-success me-2"></i> Clear Communication</h5>
+                    <p>Use simple, direct language when discussing medications or care plans. Confirm understanding by asking patients to repeat information back to you.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary">
+                        <i class="fas fa-chart-line me-2"></i> View Activity Reports
+                    </button>
+                    <button class="btn btn-outline-success">
+                        <i class="fas fa-bell me-2"></i> Send Medication Reminders
+                    </button>
+                    <button class="btn btn-outline-info">
+                        <i class="fas fa-file-medical me-2"></i> Generate Health Summary
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

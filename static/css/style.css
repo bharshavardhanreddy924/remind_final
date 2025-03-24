@@ -1,0 +1,479 @@
+/* Main Styles for MemoryCare Application */
+
+:root {
+    --primary-color: #4E7ADC;
+    --secondary-color: #7749F8;
+    --success-color: #28a745;
+    --info-color: #17a2b8;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa;
+    padding-bottom: 60px;
+    position: relative;
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+}
+
+/* PWA specific styles */
+html {
+    overflow-x: hidden;
+    position: relative;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Make elements more touch-friendly */
+button, a, .btn, input[type="checkbox"], input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}
+
+/* Prevent text size adjust on orientation change */
+html {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+
+/* Remove blue highlight when tapping links on mobile */
+a {
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+
+/* Cards and Containers */
+.card {
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    overflow: hidden;
+    border: none;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    background-color: rgba(78, 122, 220, 0.1);
+    font-weight: 600;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.container {
+    padding: 20px;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #3a65c0;
+    border-color: #3a65c0;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Form elements */
+.form-control {
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(78, 122, 220, 0.25);
+}
+
+/* Navbar */
+.navbar {
+    padding: 15px 0;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    color: var(--primary-color) !important;
+}
+
+.nav-link {
+    color: #555;
+    font-weight: 500;
+    margin: 0 5px;
+}
+
+.nav-link:hover {
+    color: var(--primary-color);
+}
+
+/* Dashboard cards */
+.feature-card {
+    height: 140px;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-decoration: none;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.feature-card i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.feature-card.tasks {
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+}
+
+.feature-card.medications {
+    background: linear-gradient(135deg, #007adf 0%, #00ecbc 100%);
+}
+
+.feature-card.memory {
+    background: linear-gradient(135deg, #b721ff 0%, #21d4fd 100%);
+}
+
+.feature-card.notes {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+}
+
+.feature-card.ai {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Task list items */
+.task-item {
+    background-color: #ffffff;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.task-item.completed {
+    background-color: #f8f9fa;
+    opacity: 0.8;
+}
+
+.task-item.completed .task-text {
+    text-decoration: line-through;
+    color: #888;
+}
+
+/* Medication items */
+.medication-item {
+    background-color: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.med-icon {
+    width: 50px;
+    height: 50px;
+    background-color: rgba(0, 123, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    font-size: 20px;
+    color: var(--primary-color);
+}
+
+/* Memory game */
+.memory-game {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 30px 0;
+}
+
+.game-cell {
+    aspect-ratio: 1/1;
+    background-color: #ddd;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.game-cell.active {
+    background-color: var(--success-color);
+    color: white;
+}
+
+/* Login and Register */
+.auth-container {
+    max-width: 500px;
+    margin: 50px auto;
+}
+
+.auth-card {
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.auth-header {
+    background: linear-gradient(135deg, #4E7ADC 0%, #7749F8 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+.auth-icon {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.auth-form {
+    padding: 30px;
+}
+
+/* AI Assistant */
+.chat-container {
+    height: 400px;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+.chat-message {
+    max-width: 80%;
+    padding: 12px 15px;
+    border-radius: 15px;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.user-message {
+    background-color: var(--primary-color);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 5px;
+}
+
+.assistant-message {
+    background-color: #e9ecef;
+    color: #333;
+    margin-right: auto;
+    border-bottom-left-radius: 5px;
+}
+
+.chat-input {
+    display: flex;
+    align-items: center;
+}
+
+.chat-input input {
+    flex-grow: 1;
+    border-radius: 20px;
+    padding: 12px 20px;
+    border: 1px solid #ddd;
+    margin-right: 10px;
+}
+
+/* Media queries */
+@media (max-width: 767px) {
+    .feature-card {
+        height: 120px;
+    }
+    
+    .feature-card i {
+        font-size: 2rem;
+    }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+    
+    /* Ensure forms are readable on mobile */
+    input, select, textarea {
+        font-size: 16px !important; /* Prevent zoom on focus in iOS */
+    }
+}
+
+/* Full screen mode for PWA */
+@media all and (display-mode: standalone) {
+    /* Styles applied only in standalone PWA mode */
+    body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+    
+    /* Hide elements that shouldn't be seen in app mode */
+    .browser-only {
+        display: none !important;
+    }
+    
+    /* Make navbar sticky with proper padding for notches */
+    .navbar {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        padding-top: max(15px, env(safe-area-inset-top));
+        padding-left: max(15px, env(safe-area-inset-left));
+        padding-right: max(15px, env(safe-area-inset-right));
+    }
+    
+    /* Footer positioning for installed app */
+    footer {
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+}
+
+@media all and (display-mode: fullscreen) {
+    /* Same styles as standalone mode */
+    body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+    
+    .browser-only {
+        display: none !important;
+    }
+    
+    .navbar {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        padding-top: max(15px, env(safe-area-inset-top));
+        padding-left: max(15px, env(safe-area-inset-left));
+        padding-right: max(15px, env(safe-area-inset-right));
+    }
+    
+    footer {
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+}
+
+/* Body class when in standalone mode */
+body.pwa-standalone {
+    /* Specific styles for when detected as installed PWA */
+    background-color: #f8f9fa;
+}
+
+/* Apply standalone-specific styles separately */
+html.pwa-standalone body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+html.pwa-standalone .browser-only {
+    display: none !important;
+}
+
+html.pwa-standalone .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding-top: max(15px, env(safe-area-inset-top));
+    padding-left: max(15px, env(safe-area-inset-left));
+    padding-right: max(15px, env(safe-area-inset-right));
+}
+
+html.pwa-standalone footer {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+
+/* Install button container */
+#install-container {
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 1050;
+}
+
+#install-button {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 12px 24px;
+    border-radius: 30px;
+}
+
+/* PWA specific styles - Add to Home Screen banner */
+.add-to-home {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #3498db;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    z-index: 9999;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.add-to-home.show {
+    display: block;
+} 
