@@ -1,89 +1,405 @@
 {% extends "base.html" %}
 
-{% block title %}Register{% endblock %}
+{% block title %}Create Account{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .auth-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        margin-top: -70px; /* Offset navbar */
+    }
+    
+    .auth-card {
+        width: 100%;
+        max-width: 480px;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        background-color: white;
+        position: relative;
+    }
+    
+    .auth-header {
+        position: relative;
+        padding: 3rem 2rem 2rem;
+        text-align: center;
+        overflow: hidden;
+    }
+    
+    .auth-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: linear-gradient(90deg, #7209b7, #4361ee);
+        z-index: 1;
+    }
+    
+    .auth-header .logo {
+        margin-bottom: 1.5rem;
+        display: inline-block;
+    }
+    
+    .auth-header .logo i {
+        font-size: 3rem;
+        color: #7209b7;
+        border-radius: 16px;
+        width: 70px;
+        height: 70px;
+        line-height: 70px;
+        background-color: #f3e8fc;
+        display: inline-block;
+    }
+    
+    .auth-header h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #343a40;
+        margin-bottom: 0.5rem;
+    }
+    
+    .auth-header p {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    
+    .auth-form {
+        padding: 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .form-control {
+        background-color: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #7209b7;
+        background-color: #fff;
+        box-shadow: 0 0 0 0.2rem rgba(114, 9, 183, 0.25);
+    }
+    
+    .form-control::placeholder {
+        color: #adb5bd;
+    }
+    
+    .form-text {
+        display: block;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .form-check {
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-check-label {
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .form-check-input {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-top: 0.15rem;
+    }
+    
+    .form-check-input:checked {
+        background-color: #7209b7;
+        border-color: #7209b7;
+    }
+    
+    .auth-btn {
+        display: block;
+        width: 100%;
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #7209b7, #5a078f);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+    
+    .auth-btn:hover {
+        box-shadow: 0 5px 15px rgba(114, 9, 183, 0.3);
+        transform: translateY(-2px);
+    }
+    
+    .auth-btn:focus {
+        box-shadow: 0 0 0 0.25rem rgba(114, 9, 183, 0.25);
+    }
+    
+    .auth-footer {
+        text-align: center;
+        padding-bottom: 2rem;
+    }
+    
+    .auth-footer a {
+        color: #7209b7;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .auth-footer a:hover {
+        color: #5a078f;
+        text-decoration: underline;
+    }
+    
+    .alert-auth {
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        font-weight: 500;
+    }
+    
+    .input-icon {
+        position: relative;
+    }
+    
+    .input-icon i {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 1rem;
+        color: #adb5bd;
+    }
+    
+    .input-icon input {
+        padding-right: 3rem;
+    }
+    
+    .show-password {
+        background: none;
+        border: none;
+        cursor: pointer;
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        z-index: 10;
+    }
+    
+    .password-strength {
+        display: none;
+        margin-top: 0.75rem;
+    }
+    
+    .password-strength.visible {
+        display: block;
+    }
+    
+    .strength-meter {
+        height: 6px;
+        border-radius: 3px;
+        background-color: #e9ecef;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .strength-meter-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s ease, background-color 0.3s ease;
+        width: 0%;
+    }
+    
+    .strength-text {
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        font-weight: 500;
+    }
+    
+    .form-select {
+        background-color: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-select:focus {
+        border-color: #7209b7;
+        background-color: #fff;
+        box-shadow: 0 0 0 0.2rem rgba(114, 9, 183, 0.25);
+    }
+    
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -0.75rem;
+        margin-left: -0.75rem;
+    }
+    
+    .form-col {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: 0.75rem;
+        padding-left: 0.75rem;
+    }
+    
+    @media (max-width: 767px) {
+        .auth-card {
+            box-shadow: none;
+            border-radius: 0;
+        }
+        
+        .auth-container {
+            padding: 0;
+        }
+        
+        .auth-header {
+            padding: 2rem 1.5rem 1.5rem;
+        }
+        
+        .auth-form {
+            padding: 1.5rem;
+        }
+        
+        .form-col {
+            flex: 0 0 100%;
+            max-width: 100%;
+            padding-right: 0;
+            padding-left: 0;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="auth-container">
-            <div class="card auth-card">
-                <div class="auth-header text-center">
-                    <div class="auth-icon">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <h2 class="fw-bold">Create Account</h2>
-                    <p class="mb-0">Join MemoryCare today</p>
-                </div>
-                <div class="auth-form">
-                    <form method="POST" action="{{ url_for('register') }}">
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Full Name</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input type="text" class="form-control" id="name" name="name" required>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                <input type="email" class="form-control" id="email" name="email" required>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                <input type="password" class="form-control" id="password" name="password" minlength="6" required>
-                            </div>
-                            <div class="form-text">Password must be at least 6 characters long</div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label">I am a:</label>
-                            <div class="row">
-                                <div class="col-6">
-                                    <div class="form-check user-type-selection p-3 border rounded">
-                                        <input class="form-check-input" type="radio" name="user_type" id="user_type_user" value="user" checked>
-                                        <label class="form-check-label w-100" for="user_type_user">
-                                            <div class="text-center">
-                                                <i class="fas fa-user fa-2x mb-2 text-primary"></i>
-                                                <h6 class="mb-0">Patient</h6>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="form-check user-type-selection p-3 border rounded">
-                                        <input class="form-check-input" type="radio" name="user_type" id="user_type_caretaker" value="caretaker">
-                                        <label class="form-check-label w-100" for="user_type_caretaker">
-                                            <div class="text-center">
-                                                <i class="fas fa-user-md fa-2x mb-2 text-primary"></i>
-                                                <h6 class="mb-0">Caretaker</h6>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="caretakerEmail" class="mb-3 d-none">
-                            <label for="caretaker_email" class="form-label">Caretaker's Email (Optional)</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user-md"></i></span>
-                                <input type="email" class="form-control" id="caretaker_email" name="caretaker_email">
-                            </div>
-                            <div class="form-text">Provide your caretaker's email if you want them to manage your account</div>
-                        </div>
-                        <div class="d-grid mb-3">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-user-plus me-2"></i> Register Account
-                            </button>
-                        </div>
-                        <div class="text-center">
-                            <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
-                        </div>
-                    </form>
-                </div>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="logo">
+                <i class="fas fa-brain"></i>
             </div>
+            <h2>Create Account</h2>
+            <p>Join ReMind to start your memory care journey</p>
+        </div>
+        
+        <div class="auth-form">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-auth" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="post" action="{{ url_for('register') }}" id="registerForm">
+                <div class="form-row">
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="firstName" class="form-label">First Name</label>
+                            <div class="input-icon">
+                                <input type="text" class="form-control" id="firstName" name="first_name" placeholder="Enter your first name" required>
+                                <i class="fas fa-user"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="lastName" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="lastName" name="last_name" placeholder="Enter your last name" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email" class="form-label">Email</label>
+                    <div class="input-icon">
+                        <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required autocomplete="email">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-icon">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Create a strong password" required autocomplete="new-password">
+                        <button type="button" class="show-password" id="togglePassword" aria-label="Toggle password visibility">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="password-strength" id="passwordStrength">
+                        <div class="strength-meter">
+                            <div class="strength-meter-fill" id="strengthMeter"></div>
+                        </div>
+                        <div class="strength-text" id="strengthText">Password strength: Too weak</div>
+                    </div>
+                    <small class="form-text">Password must be at least 8 characters with a mix of letters, numbers and symbols</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword" class="form-label">Confirm Password</label>
+                    <div class="input-icon">
+                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password" placeholder="Confirm your password" required autocomplete="new-password">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userType" class="form-label">I am a</label>
+                    <select class="form-select" id="userType" name="user_type" required>
+                        <option value="" selected disabled>Select your role</option>
+                        <option value="patient">Patient</option>
+                        <option value="caretaker">Caretaker</option>
+                        <option value="family_member">Family Member</option>
+                    </select>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="termsCheck" name="terms_accepted" required>
+                    <label class="form-check-label" for="termsCheck">
+                        I agree to the <a href="#" target="_blank">Terms of Service</a> and <a href="#" target="_blank">Privacy Policy</a>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn auth-btn">
+                    <i class="fas fa-user-plus me-2"></i> Create Account
+                </button>
+                
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="{{ url_for('login') }}">Sign In</a></p>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -91,24 +407,115 @@
 
 {% block scripts %}
 <script>
-    // Show/hide caretaker email field based on user type
     document.addEventListener('DOMContentLoaded', function() {
-        const userTypeRadios = document.querySelectorAll('input[name="user_type"]');
-        const caretakerEmailField = document.getElementById('caretakerEmail');
+        // Toggle password visibility
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
         
-        userTypeRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                if (this.value === 'user') {
-                    caretakerEmailField.classList.remove('d-none');
+        if (togglePassword && passwordInput) {
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                // Toggle icon
+                const eyeIcon = this.querySelector('i');
+                eyeIcon.classList.toggle('fa-eye');
+                eyeIcon.classList.toggle('fa-eye-slash');
+            });
+        }
+        
+        // Password strength meter
+        if (passwordInput) {
+            const strengthMeter = document.getElementById('strengthMeter');
+            const strengthText = document.getElementById('strengthText');
+            const passwordStrength = document.getElementById('passwordStrength');
+            
+            passwordInput.addEventListener('input', function() {
+                const value = passwordInput.value;
+                
+                if (value.length > 0) {
+                    passwordStrength.classList.add('visible');
                 } else {
-                    caretakerEmailField.classList.add('d-none');
+                    passwordStrength.classList.remove('visible');
+                    return;
+                }
+                
+                // Calculate password strength
+                let strength = 0;
+                
+                // Length contribution
+                if (value.length >= 8) {
+                    strength += 25;
+                }
+                
+                // Character variety contribution
+                if (/[a-z]/.test(value)) strength += 10;
+                if (/[A-Z]/.test(value)) strength += 15;
+                if (/[0-9]/.test(value)) strength += 15;
+                if (/[^a-zA-Z0-9]/.test(value)) strength += 15;
+                
+                // Consecutive character penalty
+                const consecutivePattern = /(.)\1{2,}/g;
+                const consecutiveMatches = value.match(consecutivePattern);
+                if (consecutiveMatches) {
+                    strength -= consecutiveMatches.length * 5;
+                }
+                
+                // Ensure strength is between 0-100
+                strength = Math.max(0, Math.min(100, strength));
+                
+                // Update UI
+                strengthMeter.style.width = `${strength}%`;
+                
+                if (strength < 30) {
+                    strengthMeter.style.backgroundColor = '#dc3545';
+                    strengthText.textContent = 'Password strength: Too weak';
+                    strengthText.style.color = '#dc3545';
+                } else if (strength < 60) {
+                    strengthMeter.style.backgroundColor = '#ffc107';
+                    strengthText.textContent = 'Password strength: Medium';
+                    strengthText.style.color = '#ffc107';
+                } else if (strength < 80) {
+                    strengthMeter.style.backgroundColor = '#28a745';
+                    strengthText.textContent = 'Password strength: Strong';
+                    strengthText.style.color = '#28a745';
+                } else {
+                    strengthMeter.style.backgroundColor = '#20c997';
+                    strengthText.textContent = 'Password strength: Very strong';
+                    strengthText.style.color = '#20c997';
                 }
             });
-        });
+        }
         
-        // Initial check
-        if (document.getElementById('user_type_user').checked) {
-            caretakerEmailField.classList.remove('d-none');
+        // Form validation
+        const form = document.getElementById('registerForm');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                
+                // Check if passwords match
+                if (passwordInput.value !== confirmPasswordInput.value) {
+                    confirmPasswordInput.setCustomValidity("Passwords don't match");
+                    event.preventDefault();
+                } else {
+                    confirmPasswordInput.setCustomValidity("");
+                }
+                
+                form.classList.add('was-validated');
+            });
+            
+            // Clear custom validity when typing in confirm password
+            confirmPasswordInput.addEventListener('input', function() {
+                if (passwordInput.value !== confirmPasswordInput.value) {
+                    confirmPasswordInput.setCustomValidity("Passwords don't match");
+                } else {
+                    confirmPasswordInput.setCustomValidity("");
+                }
+            });
         }
     });
 </script>

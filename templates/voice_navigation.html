@@ -1,0 +1,48 @@
+<!-- voice_navigation.html - Place this in your templates directory -->
+
+<!-- Voice navigation component -->
+<div class="voice-nav-container">
+    <button id="voiceNavButton" class="voice-button" aria-label="Voice navigation" title="Click to activate voice commands">
+        <i class="fas fa-microphone"></i>
+    </button>
+    <div id="voiceStatus" class="voice-status">Click the microphone to start voice navigation</div>
+    <div id="voiceFeedback" class="voice-feedback"></div>
+</div>
+
+<!-- Instructions modal -->
+<div class="modal fade" id="voiceCommandsModal" tabindex="-1" aria-labelledby="voiceCommandsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="voiceCommandsModalLabel">Voice Commands</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Available commands:</h6>
+                <ul>
+                    <li>"Home" or "Dashboard" - Go to the main dashboard</li>
+                    <li>"Tasks" - View your tasks</li>
+                    <li>"Medications" - View your medications</li>
+                    <li>"Notes" - Go to notes page</li>
+                    <li>"Memory Training" - Open memory training exercises</li>
+                    <li>"Assistant" - Talk to the AI assistant</li>
+                    <li>"Logout" or "Sign Out" - Log out of your account</li>
+                    {% if session.get('user_type') == 'caretaker' %}
+                    <li>"Manage [Patient Name]" - Go to a specific patient's management page</li>
+                    {% endif %}
+                </ul>
+                <p class="text-muted">
+                    <small>Note: For best results, speak clearly and in a quiet environment.</small>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help button -->
+<button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#voiceCommandsModal">
+    <i class="fas fa-question-circle"></i> Voice Commands Help
+</button>

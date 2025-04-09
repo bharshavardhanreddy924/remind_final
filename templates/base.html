@@ -4,124 +4,586 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="Memory care application for patients and caretakers">
-    <meta name="theme-color" content="#4E7ADC">
+    <meta name="theme-color" content="#4361ee">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="MemoryCare">
+    <meta name="apple-mobile-web-app-title" content="ReMind">
+    <meta name="application-name" content="ReMind">
+    <meta name="msapplication-TileColor" content="#4361ee">
+    <meta name="msapplication-config" content="{{ url_for('static', filename='browserconfig.xml') }}">
     
-    <title>MemoryCare - {% block title %}Home{% endblock %}</title>
+    <title>ReMind - {% block title %}Home{% endblock %}</title>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/voice-navigation.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- PWA Icons -->
-    <link rel="icon" href="{{ url_for('static', filename='images/icons/icon-192x192.svg') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icons/icon-192x192.svg') }}">
-    
-    <!-- iOS Splash Screens -->
-    <!-- We're using SVG icons, so we don't need multiple splash screen sizes -->
-    <!-- PWA Manifest -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/icons/icon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/icons/icon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/icons/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     
     {% block extra_css %}{% endblock %}
 
-    <!-- Register Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}")
-                .then(function(registration) {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                }, function(err) {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-            });
+    <style>
+        :root {
+            /* Enhanced color palette */
+            --primary-color: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3f37c9;
+            --secondary-color: #4cc9f0;
+            --secondary-dark: #4895ef;
+            --success-color: #4dccbd;
+            --success-dark: #00a896;
+            --info-color: #4895ef;
+            --warning-color: #f72585;
+            --danger-color: #e63946;
+            --light-color: #f8f9fc;
+            --dark-color: #43425d;
+            --gray-100: #f8f9fa;
+            --gray-200: #e9ecef;
+            --gray-300: #dee2e6;
+            --gray-400: #ced4da;
+            --gray-500: #adb5bd;
+            --gray-600: #6c757d;
+            --gray-700: #495057;
+            --gray-800: #343a40;
+            --gray-900: #212529;
+            
+            /* Enhanced UI variables */
+            --card-border-radius: 0.85rem;
+            --button-border-radius: 0.6rem;
+            --input-border-radius: 0.5rem;
+            --card-shadow: 0 0.5rem 2rem rgba(67, 97, 238, 0.1);
+            --hover-shadow: 0 0.75rem 2.5rem rgba(67, 97, 238, 0.18);
+            --transition-fast: all 0.2s ease;
+            --transition: all 0.3s ease;
+            --transition-slow: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            
+            /* Layout variables */
+            --navbar-height: 70px;
+            --section-spacing: 2.5rem;
+            --card-spacing: 1.5rem;
         }
         
-        // Check if app is in standalone mode (PWA installed)
-        let isInStandaloneMode = () => 
-            (window.matchMedia('(display-mode: standalone)').matches) || 
-            (window.matchMedia('(display-mode: fullscreen)').matches) || 
-            (window.navigator.standalone) || 
-            document.referrer.includes('android-app://');
-            
-        // Add standalone flag to all links
-        window.addEventListener('DOMContentLoaded', () => {
-            if (isInStandaloneMode()) {
-                document.body.classList.add('pwa-standalone');
-                
-                // Append standalone parameter to internal links
-                document.querySelectorAll('a').forEach(link => {
-                    if (link.href.startsWith(window.location.origin)) {
-                        let url = new URL(link.href);
-                        url.searchParams.set('standalone', 'true');
-                        link.href = url.toString();
-                    }
-                });
-            } else {
-                // Show the install prompt if not in standalone mode
-                setTimeout(() => {
-                    const installContainer = document.getElementById('install-container');
-                    if (installContainer) {
-                        installContainer.classList.remove('d-none');
-                    }
-                }, 3000);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f8faff;
+            margin-top: var(--navbar-height);
+            color: var(--gray-800);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* Enhanced Navbar styling */
+        .navbar {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            background: white;
+            height: var(--navbar-height);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+        }
+        
+        .navbar-brand i {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-item .nav-link {
+            font-weight: 500;
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            transition: var(--transition);
+            color: var(--gray-700);
+            margin: 0 0.15rem;
+            position: relative;
+        }
+        
+        .nav-item .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 3px;
+            transform: translateX(-50%);
+            transition: var(--transition-fast);
+            opacity: 0;
+        }
+        
+        .nav-item .nav-link:hover::after,
+        .nav-item .nav-link.active::after {
+            width: 30px;
+            opacity: 1;
+        }
+        
+        .nav-item .nav-link:hover {
+            color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.06);
+        }
+        
+        .nav-item .nav-link.active {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .dropdown-menu {
+            border: none;
+            border-radius: var(--card-border-radius);
+            box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.12);
+            padding: 0.8rem 0.5rem;
+            min-width: 240px;
+            margin-top: 0.75rem;
+            animation: dropdown-animation 0.3s ease forwards;
+            transform-origin: top center;
+            opacity: 0;
+            transform: translateY(-10px) scale(0.98);
+        }
+        
+        @keyframes dropdown-animation {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
             }
-        });
-    </script>
+        }
+        
+        .dropdown-item {
+            border-radius: var(--button-border-radius);
+            padding: 0.6rem 1rem;
+            transition: var(--transition-fast);
+            margin: 0.2rem 0.4rem;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+        
+        .dropdown-item:hover {
+            color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.06);
+            transform: translateX(5px);
+        }
+        
+        .dropdown-item i {
+            width: 1.5rem;
+            text-align: center;
+            color: var(--primary-color);
+            margin-right: 0.7rem;
+            opacity: 0.85;
+            transition: var(--transition-fast);
+        }
+        
+        .dropdown-item:hover i {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        
+        /* Toast and notification styles */
+        .toast {
+            background: white;
+            border-radius: var(--card-border-radius);
+            box-shadow: var(--card-shadow);
+            border: none;
+            overflow: hidden;
+        }
+        
+        .toast-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            color: white;
+            border: none;
+            padding: 0.8rem 1rem;
+        }
+        
+        .toast-header .btn-close {
+            filter: invert(1) brightness(200%);
+            opacity: 0.8;
+        }
+        
+        .toast-body {
+            padding: 1rem;
+            font-weight: 500;
+        }
+
+        /* Enhanced button styles */
+        .btn {
+            border-radius: var(--button-border-radius);
+            padding: 0.6rem 1.5rem;
+            font-weight: 500;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            font-size: 0.95rem;
+            letter-spacing: 0.2px;
+            border: none;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+        }
+        
+        .btn:hover::before {
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.35);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.5);
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary-color), var(--secondary-dark));
+            box-shadow: 0 4px 15px rgba(76, 201, 240, 0.35);
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(76, 201, 240, 0.5);
+            background: linear-gradient(135deg, var(--secondary-color), var(--secondary-dark));
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), var(--success-dark));
+            box-shadow: 0 4px 15px rgba(0, 168, 150, 0.35);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 168, 150, 0.5);
+            background: linear-gradient(135deg, var(--success-color), var(--success-dark));
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger-color), #d90429);
+            box-shadow: 0 4px 15px rgba(230, 57, 70, 0.35);
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(230, 57, 70, 0.5);
+            background: linear-gradient(135deg, var(--danger-color), #d90429);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            background: transparent;
+        }
+        
+        .btn-outline-primary:hover {
+            color: white;
+            background: var(--primary-color);
+        }
+        
+        /* Card styles */
+        .card {
+            border: none;
+            border-radius: var(--card-border-radius);
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            overflow: hidden;
+            height: 100%;
+            background: white;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--hover-shadow);
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        /* Form control styles */
+        .form-control {
+            border-radius: var(--input-border-radius);
+            padding: 0.6rem 1rem;
+            border: 1px solid var(--gray-300);
+            transition: var(--transition-fast);
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+        }
+        
+        .form-check-input {
+            width: 1.2em;
+            height: 1.2em;
+            margin-top: 0.15em;
+            border-radius: 0.25em;
+            border: 1px solid var(--gray-400);
+            transition: var(--transition-fast);
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        /* Alert styles */
+        .alert {
+            border: none;
+            border-radius: var(--card-border-radius);
+            padding: 1rem 1.5rem;
+            box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Container padding */
+        .container {
+            padding-top: 1.75rem;
+            padding-bottom: 1.75rem;
+        }
+        
+        /* Footer styles */
+        footer {
+            background: linear-gradient(to right, #f8faff, #f1f4ff);
+            padding: 1.5rem 0;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Install button styles */
+        #install-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            display: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #install-container.show {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0% { transform: translateX(-50%) translateY(0px); }
+            50% { transform: translateX(-50%) translateY(-10px); }
+            100% { transform: translateX(-50%) translateY(0px); }
+        }
+
+        #install-button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        #install-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
+        }
+
+        #install-button i {
+            font-size: 1.2em;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            :root {
+                --navbar-height: 65px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            :root {
+                --navbar-height: 60px;
+                --section-spacing: 2rem;
+                --card-spacing: 1.25rem;
+            }
+            
+            .card-body {
+                padding: 1.25rem;
+            }
+            
+            .btn {
+                padding: 0.5rem 1.25rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            :root {
+                --section-spacing: 1.75rem;
+                --card-spacing: 1rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+        }
+    </style>
 </head>
-<body>
+<body data-user-type="{{ session.get('user_type', '') }}">
     {% if session.user_id %}
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container">
-            <a class="navbar-brand fw-bold text-primary" href="{{ url_for('dashboard') }}">
-                <i class="fas fa-brain"></i> MemoryCare
+            <a class="navbar-brand" href="{{ url_for('user_dashboard') }}">
+                <i class="fas fa-brain me-2"></i>ReMind
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">
-                            <i class="fas fa-home"></i> Home
+                        <a class="nav-link {% if request.path == url_for('user_dashboard') %}active{% endif %}" href="{{ url_for('user_dashboard') }}">
+                            <i class="fas fa-home me-1"></i> Home
                         </a>
                     </li>
-                    {% if session.user_type != 'caretaker' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('tasks') }}">
-                            <i class="fas fa-tasks"></i> Tasks
+                    
+                    <!-- Daily Activities Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.path in [url_for('tasks'), url_for('medications'), url_for('notes')] %}active{% endif %}" href="#" id="activitiesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-calendar-day me-1"></i> Daily Activities
                         </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="activitiesDropdown">
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('tasks') %}active{% endif %}" href="{{ url_for('tasks') }}">
+                                    <i class="fas fa-tasks"></i> Tasks
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('medications') %}active{% endif %}" href="{{ url_for('medications') }}">
+                                    <i class="fas fa-pills"></i> Medications
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('notes') %}active{% endif %}" href="{{ url_for('notes') }}">
+                                    <i class="fas fa-sticky-note"></i> Notes
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('medications') }}">
-                            <i class="fas fa-pills"></i> Medications
+                    
+                    <!-- Health & Fitness Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.path in [url_for('fitness_analysis')] %}active{% endif %}" href="#" id="healthDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-heartbeat me-1"></i> Health
                         </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="healthDropdown">
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('fitness_analysis') %}active{% endif %}" href="{{ url_for('fitness_analysis') }}">
+                                    <i class="fas fa-chart-line"></i> Fitness Analysis
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('memory_training') }}">
-                            <i class="fas fa-brain"></i> Memory Training
+                    
+                    <!-- Memory Tools Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.path in [url_for('memory_training'), url_for('reminiscence_therapy'), url_for('face_recognition_page')] %}active{% endif %}" href="#" id="memoryDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-brain me-1"></i> Memory
                         </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="memoryDropdown">
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('memory_training') %}active{% endif %}" href="{{ url_for('memory_training') }}">
+                                    <i class="fas fa-brain"></i> Memory Training
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('reminiscence_therapy') %}active{% endif %}" href="{{ url_for('reminiscence_therapy') }}">
+                                    <i class="fas fa-images"></i> Memory Album
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('face_recognition_page') %}active{% endif %}" href="{{ url_for('face_recognition_page') }}">
+                                    <i class="fas fa-camera"></i> Face Recognition
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="http://127.0.0.1:5000/" 
+                                   data-bs-toggle="tooltip" data-bs-placement="left" 
+                                   title="Upload a photo or take a picture to get comprehensive nutritional insights about your meal in seconds!">
+                                    <i class="fas fa-utensils"></i> NutriLens
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('notes') }}">
-                            <i class="fas fa-sticky-note"></i> Notes
+                    
+                    <!-- Tools Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.path in [url_for('ai_assistant')] %}active{% endif %}" href="#" id="toolsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-tools me-1"></i> Tools
                         </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="toolsDropdown">
+                            <li>
+                                <a class="dropdown-item {% if request.path == url_for('ai_assistant') %}active{% endif %}" href="{{ url_for('ai_assistant') }}">
+                                    <i class="fas fa-robot"></i> AI Assistant
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="http://127.0.0.1:5000/"
+                                   data-bs-toggle="tooltip" data-bs-placement="left" 
+                                   title="Upload a photo or take a picture to get comprehensive nutritional insights about your meal in seconds!">
+                                    <i class="fas fa-utensils"></i> NutriLens
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('ai_assistant') }}">
-                            <i class="fas fa-robot"></i> AI Assistant
-                        </a>
-                    </li>
-                    {% endif %}
+                    
+                    <!-- User Dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle"></i> {{ session.name }}
+                            <i class="fas fa-user-circle me-1"></i> {{ session.name }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-1"></i> Logout</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -134,7 +596,10 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
@@ -142,22 +607,290 @@
         {% block content %}{% endblock %}
     </div>
 
-    <footer class="mt-5 py-3 bg-light">
+    <footer class="mt-5 py-4">
         <div class="container text-center">
-            <p class="text-muted mb-0">&copy; 2025 MemoryCare. All rights reserved.</p>
+            <p class="text-muted mb-0">&copy; 2025 ReMind. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- Install PWA Button (hidden by default, shown when installation is possible) -->
-    <div class="fixed-bottom p-3 d-none d-flex justify-content-center" id="install-container">
-        <button id="install-button" class="btn btn-primary btn-lg shadow-sm">
-            <i class="fas fa-download me-2"></i> Install App
+    <!-- Install PWA Button -->
+    <div id="install-container" class="d-none">
+        <button id="install-button" class="btn btn-primary">
+            <i class="fas fa-download"></i>
+            Install App
         </button>
+    </div>
+
+    <!-- Android PWA Install Banner -->
+    <div id="android-install-banner" class="d-none position-fixed bottom-0 start-0 end-0 bg-white p-3 shadow-lg" style="z-index: 1050; border-top: 4px solid var(--primary-color);">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+                <img src="{{ url_for('static', filename='images/icons/icon-96x96.png') }}" alt="ReMind App Icon" class="me-3" style="width: 48px; height: 48px;">
+                <div>
+                    <h5 class="mb-0">Install ReMind App</h5>
+                    <p class="mb-0 text-muted small">Add to home screen for better experience</p>
+                </div>
+            </div>
+            <div>
+                <button id="android-install-btn" class="btn btn-primary me-2">Install</button>
+                <button id="android-install-close" class="btn btn-light">Later</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Load Leaflet CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Custom Scripts -->
     <script src="{{ url_for('static', filename='js/pwa-install.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/location_tracker.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/voice_controller.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification_manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/permissions_manager.js') }}"></script>
+    <!-- Feature scripts -->
+    <script src="{{ url_for('static', filename='js/face_recognition.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/reminiscence_therapy.js') }}"></script>
+
+    <!-- Initialize Service Worker and Notifications -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Add page transition effects
+            const content = document.querySelector('.container');
+            content.style.opacity = '0';
+            content.style.transform = 'translateY(20px)';
+            content.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            
+            setTimeout(() => {
+                content.style.opacity = '1';
+                content.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Detect Android device
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
+                                       window.navigator.standalone || 
+                                       document.referrer.includes('android-app://');
+            
+            // Register service worker with improved error handling
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registration = await navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}", {
+                        scope: '/',
+                        updateViaCache: 'none' // Ensure fresh service worker on page load
+                    });
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    
+                    // Android-specific enhancements
+                    if (isAndroid) {
+                        // Force update check on Android for better update behavior
+                        registration.update();
+                        
+                        // Add Android-specific styles
+                        document.body.classList.add('android-device');
+                    }
+                    
+                    // Setup push notification subscription
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        try {
+                            const subscription = await registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: 'YOUR_VAPID_PUBLIC_KEY' // Replace with your VAPID public key
+                            });
+                            
+                            // Send subscription to server
+                            await fetch('/api/push-subscription', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(subscription)
+                            });
+                            
+                            console.log('Push notification subscription successful');
+                        } catch (pushErr) {
+                            console.log('Push subscription failed: ', pushErr);
+                        }
+                    }
+                } catch (err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                }
+            }
+            
+            // Check if notifications are supported and request permission
+            if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+                // Wait for user interaction before requesting permission (better UX)
+                document.addEventListener('click', async function requestNotificationPermission() {
+                    document.removeEventListener('click', requestNotificationPermission);
+                    const permission = await Notification.requestPermission();
+                    console.log('Notification permission:', permission);
+                }, {once: true});
+            }
+
+            // Initialize permissions manager
+            if (window.permissionsManager) {
+                await window.permissionsManager.initialize();
+            }
+            
+            // Apply active class to current nav item
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                if (href && currentPath === href) {
+                    link.classList.add('active');
+                }
+            });
+            
+            // Add to homescreen related code - check if app is in standalone mode
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                              window.navigator.standalone || 
+                              document.referrer.includes('android-app://');
+                              
+            if (isStandalone) {
+                document.body.classList.add('pwa-standalone');
+                // Hide any browser-only UI elements
+                document.querySelectorAll('.browser-only').forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
+            
+            // Handle PWA installation for Android
+            let deferredPrompt;
+            const androidInstallBanner = document.getElementById('android-install-banner');
+            const androidInstallBtn = document.getElementById('android-install-btn');
+            const androidInstallClose = document.getElementById('android-install-close');
+            
+            // Hide banner initially
+            if (androidInstallBanner) {
+                androidInstallBanner.classList.add('d-none');
+            }
+            
+            window.addEventListener('beforeinstallprompt', (e) => {
+                // Prevent Chrome from automatically showing the prompt
+                e.preventDefault();
+                
+                // Save the event
+                deferredPrompt = e;
+                
+                // Show install button
+                if (isAndroid && !isInStandaloneMode && androidInstallBanner) {
+                    // Don't show immediately to avoid interrupting user
+                    setTimeout(() => {
+                        // Check if user has previously dismissed
+                        const dismissedTime = localStorage.getItem('pwaInstallDismissed');
+                        const showAgain = !dismissedTime || (Date.now() - dismissedTime > 86400000); // 24 hours
+                        
+                        if (showAgain) {
+                            androidInstallBanner.classList.remove('d-none');
+                        }
+                    }, 5000);
+                }
+            });
+            
+            // Handle Android install button click
+            if (androidInstallBtn) {
+                androidInstallBtn.addEventListener('click', async () => {
+                    if (!deferredPrompt) return;
+                    
+                    // Show install prompt
+                    deferredPrompt.prompt();
+                    
+                    // Wait for user response
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User ${outcome} the installation`);
+                    
+                    // Clear prompt
+                    deferredPrompt = null;
+                    
+                    // Hide banner
+                    androidInstallBanner.classList.add('d-none');
+                    
+                    // Track analytics
+                    if (typeof gtag === 'function') {
+                        gtag('event', 'pwa_install_prompt', {
+                            'event_category': 'engagement',
+                            'event_label': outcome
+                        });
+                    }
+                });
+            }
+            
+            // Handle dismiss
+            if (androidInstallClose) {
+                androidInstallClose.addEventListener('click', () => {
+                    androidInstallBanner.classList.add('d-none');
+                    localStorage.setItem('pwaInstallDismissed', Date.now());
+                });
+            }
+            
+            // Listen for appinstalled event
+            window.addEventListener('appinstalled', (e) => {
+                // Hide banner if visible
+                if (androidInstallBanner) {
+                    androidInstallBanner.classList.add('d-none');
+                }
+                
+                // Log installation
+                console.log('App was installed', e);
+                
+                // Track analytics
+                if (typeof gtag === 'function') {
+                    gtag('event', 'pwa_installed', {
+                        'event_category': 'engagement'
+                    });
+                }
+                
+                // Show a success toast
+                const toastContainer = document.createElement('div');
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '1090';
+                
+                const toastHTML = `
+                    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-header bg-success text-white">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong class="me-auto">Successfully Installed</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            <p>ReMind has been installed successfully!</p>
+                            <p class="mb-0 small">You can now access it from your home screen.</p>
+                        </div>
+                    </div>
+                `;
+                
+                toastContainer.innerHTML = toastHTML;
+                document.body.appendChild(toastContainer);
+                
+                const toastEl = toastContainer.querySelector('.toast');
+                const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+                toast.show();
+                
+                // Remove from DOM after hiding
+                toastEl.addEventListener('hidden.bs.toast', () => {
+                    document.body.removeChild(toastContainer);
+                });
+            });
+        });
+    </script>
+
     {% block scripts %}{% endblock %}
+
+    {% if session.get('user_id') %}
+        {% include 'voice_navigation.html' %}
+        <script src="{{ url_for('static', filename='js/voice-navigation.js') }}"></script>
+    {% endif %}
 </body>
 </html>

@@ -1,0 +1,412 @@
+{% extends 'base.html' %}
+
+{% block title %}Reminiscence Therapy{% endblock %}
+
+{% block extra_css %}
+<style>
+    .memory-prompt {
+        background-color: #f8f9fa;
+        border-left: 4px solid #4E7ADC;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+    }
+    
+    .slideshow-container {
+        position: relative;
+        height: 400px;
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .slideshow-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background-color: #f8f9fa;
+        opacity: 0;
+        transition: opacity 1s ease-in-out;
+    }
+    
+    .slideshow-image.active {
+        opacity: 1;
+    }
+    
+    .slideshow-controls {
+        position: absolute;
+        bottom: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
+        z-index: 10;
+    }
+    
+    .control-btn {
+        background-color: rgba(255, 255, 255, 0.7);
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .control-btn:hover {
+        background-color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .memory-entry {
+        margin-bottom: 20px;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.3s;
+    }
+    
+    .memory-entry:hover {
+        transform: translateY(-5px);
+    }
+    
+    .memory-header {
+        padding: 15px 20px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eaeaea;
+    }
+    
+    .memory-year {
+        display: inline-block;
+        padding: 2px 8px;
+        background-color: #4E7ADC;
+        color: white;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        margin-right: 10px;
+    }
+    
+    .memory-date {
+        color: #6c757d;
+        font-size: 0.8rem;
+    }
+    
+    .memory-content {
+        padding: 20px;
+        background-color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="fw-bold">
+                <a href="{{ url_for('dashboard') }}" class="text-decoration-none">
+                    <i class="fas fa-arrow-left me-2"></i>
+                </a>
+                Reminiscence Therapy
+            </h1>
+            <p class="text-muted">Explore old memories through photos and stories</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#add-memory-modal">
+                <i class="fas fa-plus-circle me-2"></i>
+                Add Memory
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            {% if old_images %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Memory Photo Slideshow</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="slideshow-container">
+                        {% for image in old_images %}
+                        <img src="{{ url_for('static', filename=image) }}" alt="Memory Photo" class="slideshow-image {% if loop.first %}active{% endif %}" data-index="{{ loop.index0 }}">
+                        {% endfor %}
+                        
+                        <div class="slideshow-controls">
+                            <button class="control-btn" id="prev-slide">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="control-btn" id="play-pause">
+                                <i class="fas fa-pause"></i>
+                            </button>
+                            <button class="control-btn" id="next-slide">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card mb-4">
+                <div class="card-body text-center p-5">
+                    <i class="fas fa-images fa-4x text-muted mb-3"></i>
+                    <h5>No memory photos found</h5>
+                    <p class="text-muted">Upload photos to start your memory collection</p>
+                    <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#add-memory-modal">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        Upload First Memory Photo
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Memory Prompts</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">These prompts can help stimulate memories and conversations about the past:</p>
+                    
+                    {% for prompt in memory_prompts %}
+                    <div class="memory-prompt">
+                        <i class="fas fa-quote-left text-primary me-2"></i>
+                        {{ prompt }}
+                    </div>
+                    {% endfor %}
+                    
+                    <button id="refresh-prompts" class="btn btn-outline-primary">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Get New Prompts
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Memory Journal</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addMemoryEntryModal">
+                        <i class="fas fa-pen me-1"></i>
+                        New Entry
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    {% if memory_entries %}
+                        <div class="list-group list-group-flush">
+                            {% for entry in memory_entries %}
+                            <div class="memory-entry">
+                                <div class="memory-header">
+                                    {% if entry.title %}
+                                        <h6 class="mb-1">{{ entry.title }}</h6>
+                                    {% endif %}
+                                    <div>
+                                        {% if entry.year %}
+                                        <span class="memory-year">{{ entry.year }}</span>
+                                        {% endif %}
+                                        <span class="memory-date">{{ entry.date.strftime('%b %d, %Y') }}</span>
+                                    </div>
+                                </div>
+                                <div class="memory-content">
+                                    {% if entry.path %}
+                                        <div class="mb-3">
+                                            <img src="{{ url_for('static', filename=entry.path) }}" alt="Memory" class="img-fluid rounded">
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if entry.description %}
+                                        <p>{{ entry.description }}</p>
+                                    {% endif %}
+                                    
+                                    {% if entry.content %}
+                                        <p>{{ entry.content }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center p-5">
+                            <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                            <h5>No journal entries yet</h5>
+                            <p class="text-muted">Start documenting your memories</p>
+                            <button type="button" class="btn btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#addMemoryEntryModal">
+                                <i class="fas fa-pen me-2"></i>
+                                Create First Entry
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Memory Photo Modal -->
+<div class="modal fade" id="add-memory-modal" tabindex="-1" aria-labelledby="add-memory-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="add-memory-modal-label">Add Memory Photo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-memory-photo-form" method="POST" action="{{ url_for('upload_memory') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="photo" class="form-label">Photo</label>
+                        <input type="file" class="form-control" id="photo" name="photo" accept="image/*" required>
+                        <div class="form-text">Upload a photo from your past (max size: 32MB)</div>
+                    </div>
+                    <div id="memory-photo-preview" class="text-center mb-3 d-none"></div>
+                    <div class="mb-3">
+                        <label for="year" class="form-label">Year</label>
+                        <input type="text" class="form-control" id="year" name="year" placeholder="When was this photo taken? (optional)">
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="What's happening in this photo? (optional)"></textarea>
+                    </div>
+                    <div id="memory-upload-progress" class="progress mb-3 d-none" style="height: 20px;">
+                        <div id="memory-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary">Upload Memory</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Memory Entry Modal -->
+<div class="modal fade" id="addMemoryEntryModal" tabindex="-1" aria-labelledby="addMemoryEntryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addMemoryEntryModalLabel">Add Memory Journal Entry</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_memory_entry') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="year" class="form-label">Year (Optional)</label>
+                        <input type="text" class="form-control" id="year" name="year" placeholder="e.g., 1985">
+                    </div>
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Memory Content</label>
+                        <textarea class="form-control" id="content" name="content" rows="5" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Memory</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Slideshow functionality
+    const images = document.querySelectorAll('.slideshow-image');
+    const prevButton = document.getElementById('prev-slide');
+    const nextButton = document.getElementById('next-slide');
+    const playPauseButton = document.getElementById('play-pause');
+    
+    if (images.length > 0) {
+        let currentIndex = 0;
+        let slideInterval;
+        let isPlaying = true;
+        
+        function showSlide(index) {
+            // Hide all images
+            images.forEach(img => img.classList.remove('active'));
+            
+            // Show the selected image
+            images[index].classList.add('active');
+            
+            // Update current index
+            currentIndex = index;
+        }
+        
+        function nextSlide() {
+            let newIndex = currentIndex + 1;
+            if (newIndex >= images.length) {
+                newIndex = 0;
+            }
+            showSlide(newIndex);
+        }
+        
+        function prevSlide() {
+            let newIndex = currentIndex - 1;
+            if (newIndex < 0) {
+                newIndex = images.length - 1;
+            }
+            showSlide(newIndex);
+        }
+        
+        function startSlideshow() {
+            isPlaying = true;
+            playPauseButton.innerHTML = '<i class="fas fa-pause"></i>';
+            slideInterval = setInterval(nextSlide, 5000);
+        }
+        
+        function pauseSlideshow() {
+            isPlaying = false;
+            playPauseButton.innerHTML = '<i class="fas fa-play"></i>';
+            clearInterval(slideInterval);
+        }
+        
+        // Event listeners
+        if (nextButton) {
+            nextButton.addEventListener('click', function() {
+                pauseSlideshow();
+                nextSlide();
+            });
+        }
+        
+        if (prevButton) {
+            prevButton.addEventListener('click', function() {
+                pauseSlideshow();
+                prevSlide();
+            });
+        }
+        
+        if (playPauseButton) {
+            playPauseButton.addEventListener('click', function() {
+                if (isPlaying) {
+                    pauseSlideshow();
+                } else {
+                    startSlideshow();
+                }
+            });
+        }
+        
+        // Start slideshow
+        startSlideshow();
+    }
+    
+    // Memory prompts refresh functionality
+    const refreshPromptsButton = document.getElementById('refresh-prompts');
+    
+    if (refreshPromptsButton) {
+        refreshPromptsButton.addEventListener('click', function() {
+            // Reload the page to get new prompts
+            location.reload();
+        });
+    }
+});
+</script>
+{% endblock %} 

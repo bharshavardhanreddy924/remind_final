@@ -1,122 +1,319 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <meta name="theme-color" content="#4E7ADC">
-    <title>MemoryCare Loading</title>
-    <style>
-        body, html {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #4E7ADC;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            overflow: hidden;
-        }
-        
-        .splash-container {
-            width: 100%;
-            max-width: 100vw;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        
-        .app-logo {
-            width: 120px;
-            height: 120px;
-            background-color: white;
-            border-radius: 30px;
-            margin: 0 auto 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-        
-        .app-logo i {
-            font-size: 70px;
-            color: #4E7ADC;
-        }
-        
-        h1 {
-            font-size: 28px;
-            margin: 0 0 10px;
-            font-weight: 600;
-        }
-        
-        p {
-            font-size: 16px;
-            opacity: 0.9;
-            margin-bottom: 40px;
-        }
-        
-        .spinner {
-            width: 40px;
-            height: 40px;
-            margin: 0 auto;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Hide content briefly to prevent flash */
-        .app-content {
+{% extends "base.html" %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        background: linear-gradient(135deg, #4361ee, #7209b7);
+    }
+    
+    .splash-container {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: white;
+        position: relative;
+        z-index: 10;
+        padding: 0 20px;
+    }
+    
+    .background-animation {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 1;
+    }
+    
+    .background-animation svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0.05;
+    }
+    
+    .splash-logo {
+        margin-bottom: 2rem;
+        animation: bounce 2s infinite;
+        transform-origin: center bottom;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .logo-icon {
+        font-size: 5rem;
+        background: white;
+        width: 120px;
+        height: 120px;
+        border-radius: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #4361ee;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+    
+    .splash-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        animation: fadeIn 1.5s ease-in-out;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    .splash-subtitle {
+        font-size: 1.25rem;
+        opacity: 0.8;
+        margin-bottom: 3rem;
+        max-width: 600px;
+        animation: fadeIn 1.7s ease-in-out;
+    }
+    
+    .splash-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+        max-width: 320px;
+        animation: slideUp 1.9s ease-in-out;
+    }
+    
+    .splash-btn {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 50px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .splash-btn-primary {
+        background-color: white;
+        color: #4361ee;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .splash-btn-primary:hover, .splash-btn-primary:focus {
+        background-color: rgba(255, 255, 255, 0.9);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .splash-btn-outline {
+        background-color: transparent;
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+    
+    .splash-btn-outline:hover, .splash-btn-outline:focus {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: white;
+        transform: translateY(-3px);
+    }
+    
+    .splash-footer {
+        position: absolute;
+        bottom: 20px;
+        font-size: 0.9rem;
+        opacity: 0.6;
+        animation: fadeIn 2s ease-in-out;
+    }
+    
+    .splash-version {
+        font-size: 0.8rem;
+        margin-top: 5px;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideUp {
+        from {
             opacity: 0;
-            transition: opacity 0.5s ease;
+            transform: translateY(20px);
         }
-        
-        /* When loaded add this class */
-        .loaded .app-content {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-20px);
+        }
+        60% {
+            transform: translateY(-10px);
+        }
+    }
+    
+    .particles {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+    
+    .particle {
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.5);
+        animation: float 20s infinite;
+    }
+    
+    @keyframes float {
+        0% {
+            transform: translateY(0) translateX(0) rotate(0deg);
             opacity: 1;
         }
-        
-        /* For notches and safe areas */
-        @supports(padding: max(0px)) {
-            .splash-container {
-                padding-left: max(20px, env(safe-area-inset-left));
-                padding-right: max(20px, env(safe-area-inset-right));
-                padding-top: max(20px, env(safe-area-inset-top));
-                padding-bottom: max(20px, env(safe-area-inset-bottom));
-            }
+        100% {
+            transform: translateY(-100vh) translateX(100px) rotate(360deg);
+            opacity: 0;
         }
-    </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body>
-    <div class="splash-container">
-        <div class="app-logo">
+    }
+    
+    @media (max-width: 767px) {
+        .splash-title {
+            font-size: 2rem;
+        }
+        
+        .splash-subtitle {
+            font-size: 1rem;
+        }
+        
+        .logo-icon {
+            font-size: 3.5rem;
+            width: 100px;
+            height: 100px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="background-animation">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+        <path fill="#ffffff" d="M0,192L48,186.7C96,181,192,171,288,181.3C384,192,480,224,576,229.3C672,235,768,213,864,202.7C960,192,1056,192,1152,197.3C1248,203,1344,213,1392,218.7L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+    </svg>
+    
+    <div class="particles" id="particles">
+        <!-- Particles will be added dynamically with JavaScript -->
+    </div>
+</div>
+
+<div class="splash-container">
+    <div class="splash-logo">
+        <div class="logo-icon">
             <i class="fas fa-brain"></i>
         </div>
-        <h1>MemoryCare</h1>
-        <p>Your personal memory assistant</p>
-        <div class="spinner"></div>
     </div>
+    
+    <h1 class="splash-title">ReMind</h1>
+    <p class="splash-subtitle">A comprehensive memory care assistant for patients and caregivers</p>
+    
+    <div class="splash-actions">
+        {% if session.user_id %}
+            <a href="{{ url_for('user_dashboard') }}" class="splash-btn splash-btn-primary">
+                <i class="fas fa-home me-2"></i> Dashboard
+            </a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="splash-btn splash-btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i> Sign In
+            </a>
+            <a href="{{ url_for('register') }}" class="splash-btn splash-btn-outline">
+                <i class="fas fa-user-plus me-2"></i> Create Account
+            </a>
+        {% endif %}
+    </div>
+    
+    <div class="splash-footer">
+        <div>&copy; 2025 ReMind. All rights reserved.</div>
+        <div class="splash-version">Version 2.0</div>
+    </div>
+</div>
+{% endblock %}
 
-    <script>
-        // Redirect to main app after splash screen
-        document.addEventListener("DOMContentLoaded", function() {
-            // Simulate loading time (you can remove this in production)
-            setTimeout(function() {
-                // Check if launched from homescreen
-                const urlParams = new URLSearchParams(window.location.search);
-                const isStandalone = urlParams.has('standalone') && urlParams.get('standalone') === 'true';
-                
-                // Redirect to main page with standalone parameter if needed
-                window.location.href = isStandalone ? '/?standalone=true' : '/';
-            }, 2000); // 2 second splash screen
-        });
-    </script>
-</body>
-</html> 
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Create floating particles
+        const particlesContainer = document.getElementById('particles');
+        const numberOfParticles = 20;
+        
+        for (let i = 0; i < numberOfParticles; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            
+            // Random size between 5 and 30 pixels
+            const size = Math.floor(Math.random() * 25) + 5;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            // Random position
+            const posX = Math.floor(Math.random() * 100);
+            const posY = Math.floor(Math.random() * 100);
+            particle.style.left = `${posX}%`;
+            particle.style.top = `${posY}%`;
+            
+            // Random opacity
+            particle.style.opacity = (Math.random() * 0.5) + 0.1;
+            
+            // Animation delay and duration
+            const animationDuration = (Math.random() * 20) + 10;
+            const animationDelay = Math.random() * 10;
+            particle.style.animationDuration = `${animationDuration}s`;
+            particle.style.animationDelay = `${animationDelay}s`;
+            
+            particlesContainer.appendChild(particle);
+        }
+        
+        // Redirect to main app after a delay (only in standalone mode)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                            window.navigator.standalone ||
+                            document.referrer.includes('android-app://');
+        
+        if (isStandalone) {
+            setTimeout(() => {
+                window.location.href = "{{ url_for('index') }}";
+            }, 3000); // Redirect after 3 seconds
+        }
+    });
+</script>
+{% endblock %}
+
+{% block head %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="ReMind - Comprehensive memory care application">
+<meta name="theme-color" content="#4361ee">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ReMind">
+<meta name="application-name" content="ReMind">
+
+<title>ReMind</title>
+{% endblock %} 

@@ -33,7 +33,7 @@ def add_pwa_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'no-referrer-when-downgrade'
-    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+    response.headers['Permissions-Policy'] = 'geolocation=(self), microphone=(), camera=()'
     return response
 
 # Offline fallback page
@@ -89,6 +89,11 @@ def init_db():
 # Initialize database
 if db is not None:
     init_db()
+    
+    # Create locations collection if it doesn't exist
+    if 'locations' not in db.list_collection_names():
+        db.create_collection('locations')
+        print("Created locations collection")
 
 # Ensure NLTK data is downloaded
 try:
@@ -349,11 +354,17 @@ def tasks():
         if request.form.get('action') == 'add':
             task_text = request.form.get('task_text')
             
+            # Add task to database
             db.tasks.update_one(
                 {"user_id": user_id},
                 {"$push": {"tasks": {"text": task_text, "completed": False}}}
             )
-            flash('Task added successfully', 'success')
+            
+            # Schedule notification for the new task
+            if schedule_task_notification(task_text, user_id):
+                flash('Task added successfully with notification scheduled', 'success')
+            else:
+                flash('Task added successfully but notification scheduling failed', 'warning')
         
         elif request.form.get('action') == 'update':
             task_index = int(request.form.get('task_index'))
@@ -425,23 +436,37 @@ def medications():
                         "time": med_time,
                     }
                     
+                    # Add medication to database
                     db.medications.update_one(
                         {"user_id": user_id},
                         {"$push": {"medications": new_med}},
                         upsert=True
                     )
                     
-                    flash('Medication added successfully', 'success')
+                    # Schedule notification for the new medication
+                    if schedule_medication_notification(med_name, med_time, user_id):
+                        flash('Medication added successfully with notification scheduled', 'success')
+                    else:
+                        flash('Medication added successfully but notification scheduling failed', 'warning')
+                        
                 except ValueError:
                     flash('Invalid time format. Please use HH:MM AM/PM', 'danger')
         
         elif request.form.get('action') == 'delete':
             med_id = request.form.get('med_id')
             
+            # Remove medication from database
             db.medications.update_one(
                 {"user_id": user_id},
                 {"$pull": {"medications": {"id": med_id}}}
             )
+            
+            # Remove any scheduled notifications for this medication
+            db.notifications.delete_many({
+                "user_id": user_id,
+                "type": "medication",
+                "medication_id": med_id
+            })
             
             flash('Medication deleted', 'success')
     
@@ -689,6 +714,148 @@ def update_patient_notes(patient_id):
         flash(f'Error: {str(e)}', 'danger')
         return redirect(url_for('manage_patient', patient_id=patient_id))
 
+# Location tracking routes
+@app.route('/api/update_location', methods=['POST'])
+def update_location():
+    if 'user_id' not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    try:
+        data = request.get_json()
+        if not data or 'latitude' not in data or 'longitude' not in data:
+            return jsonify({"error": "Invalid location data"}), 400
+        
+        # Extract location data
+        latitude = float(data['latitude'])
+        longitude = float(data['longitude'])
+        accuracy = float(data.get('accuracy', 0))
+        source = data.get('source', 'unknown')
+        timestamp = datetime.fromisoformat(data.get('timestamp', datetime.now().isoformat()))
+        address = data.get('address', '')
+        
+        # Validate coordinates
+        if not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
+            return jsonify({"error": "Invalid coordinates"}), 400
+        
+        # Get existing location data
+        existing_location = db.locations.find_one({"user_id": ObjectId(session['user_id'])})
+        
+        # Update location in database with source tracking
+        location_data = {
+            "user_id": ObjectId(session['user_id']),
+            "latitude": latitude,
+            "longitude": longitude,
+            "accuracy": accuracy,
+            "source": source,
+            "timestamp": timestamp,
+            "address": address,
+            "location_history": []
+        }
+        
+        # Add to location history if it exists
+        if existing_location:
+            location_data["location_history"] = existing_location.get("location_history", [])
+            # Keep only last 10 locations
+            location_data["location_history"].append({
+                "latitude": existing_location["latitude"],
+                "longitude": existing_location["longitude"],
+                "accuracy": existing_location.get("accuracy", 0),
+                "source": existing_location.get("source", "unknown"),
+                "timestamp": existing_location.get("timestamp", datetime.now())
+            })
+            if len(location_data["location_history"]) > 10:
+                location_data["location_history"].pop(0)
+        
+        # Update location in database
+        db.locations.update_one(
+            {"user_id": ObjectId(session['user_id'])},
+            {"$set": location_data},
+            upsert=True
+        )
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Location updated from {source}",
+            "accuracy": accuracy
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/patient_location/<patient_id>')
+def patient_location(patient_id):
+    if 'user_id' not in session or session.get('user_type') != 'caretaker':
+        return redirect(url_for('login'))
+    
+    try:
+        patient_id_obj = ObjectId(patient_id)
+        patient = get_user_data(patient_id_obj)
+        
+        if not patient:
+            flash('Patient not found', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        # Get patient's location data with history
+        location_data = db.locations.find_one({"user_id": patient_id_obj})
+        
+        # Get location history for the last 24 hours
+        if location_data:
+            current_time = datetime.now()
+            location_data["recent_history"] = [
+                loc for loc in location_data.get("location_history", [])
+                if (current_time - loc["timestamp"]).total_seconds() <= 86400  # 24 hours
+            ]
+        
+        return render_template('patient_location.html',
+                             patient=patient,
+                             location=location_data,
+                             api_key='AIzaSyBuygAgUK0_5q7aHidZuWH7AKSJmdU75RY')
+                             
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+@app.route('/api/get_patient_location/<patient_id>')
+def get_patient_location(patient_id):
+    if 'user_id' not in session or session.get('user_type') != 'caretaker':
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    try:
+        patient_id_obj = ObjectId(patient_id)
+        location_data = db.locations.find_one({"user_id": patient_id_obj})
+        
+        if location_data:
+            # Get recent location history
+            current_time = datetime.now()
+            recent_history = [
+                loc for loc in location_data.get("location_history", [])
+                if (current_time - loc["timestamp"]).total_seconds() <= 86400  # 24 hours
+            ]
+            
+            return jsonify({
+                "latitude": location_data['latitude'],
+                "longitude": location_data['longitude'],
+                "accuracy": location_data.get('accuracy', 0),
+                "source": location_data.get('source', 'unknown'),
+                "address": location_data.get('address', ''),
+                "timestamp": location_data['timestamp'].isoformat(),
+                "recent_history": [
+                    {
+                        "latitude": loc["latitude"],
+                        "longitude": loc["longitude"],
+                        "accuracy": loc.get("accuracy", 0),
+                        "source": loc.get("source", "unknown"),
+                        "timestamp": loc["timestamp"].isoformat()
+                    }
+                    for loc in recent_history
+                ]
+            })
+        else:
+            return jsonify({"error": "No location data found"}), 404
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # Error handlers
 @app.errorhandler(500)
 def internal_error(error):
@@ -724,6 +891,161 @@ def handle_standalone_mode():
     if request.args.get('standalone') == 'true':
         session['standalone'] = True
         g.standalone = True
+
+# Add these helper functions after the existing helper functions
+def schedule_task_notification(task_text, user_id):
+    """Schedule a notification for a new task"""
+    try:
+        # Get user's notification preferences
+        user = get_user_data(ObjectId(user_id))
+        if not user or not user.get('notifications_enabled', True):
+            return False
+
+        # Create notification data
+        notification_data = {
+            "type": "task",
+            "title": "Task Reminder",
+            "body": f"Task: {task_text}",
+            "user_id": user_id,
+            "scheduled_time": datetime.now() + timedelta(minutes=20)
+        }
+        
+        # Store notification in database
+        db.notifications.insert_one(notification_data)
+        return True
+    except Exception as e:
+        print(f"Error scheduling task notification: {e}")
+        return False
+
+def schedule_medication_notification(med_name, med_time, user_id):
+    """Schedule a notification for a new medication"""
+    try:
+        # Get user's notification preferences
+        user = get_user_data(ObjectId(user_id))
+        if not user or not user.get('notifications_enabled', True):
+            return False
+
+        # Convert medication time to datetime
+        try:
+            med_datetime = datetime.strptime(med_time, '%I:%M %p')
+            # Set the time to today's date
+            med_datetime = med_datetime.replace(
+                year=datetime.now().year,
+                month=datetime.now().month,
+                day=datetime.now().day
+            )
+            
+            # If the time has already passed today, schedule for tomorrow
+            if med_datetime < datetime.now():
+                med_datetime += timedelta(days=1)
+            
+            # Schedule notification 20 minutes before medication time
+            notification_time = med_datetime - timedelta(minutes=20)
+            
+            notification_data = {
+                "type": "medication",
+                "title": "Medication Reminder",
+                "body": f"Time to take: {med_name}",
+                "user_id": user_id,
+                "scheduled_time": notification_time,
+                "medication_time": med_datetime
+            }
+            
+            db.notifications.insert_one(notification_data)
+            return True
+        except ValueError:
+            print(f"Invalid time format: {med_time}")
+            return False
+    except Exception as e:
+        print(f"Error scheduling medication notification: {e}")
+        return False
+
+@app.route('/api/notifications', methods=['GET'])
+def get_notifications():
+    if 'user_id' not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    try:
+        user_id = ObjectId(session['user_id'])
+        current_time = datetime.now()
+        
+        # Get due notifications
+        notifications = list(db.notifications.find({
+            "user_id": user_id,
+            "scheduled_time": {"$lte": current_time},
+            "sent": {"$ne": True}
+        }))
+        
+        # Mark notifications as sent
+        if notifications:
+            notification_ids = [n['_id'] for n in notifications]
+            db.notifications.update_many(
+                {"_id": {"$in": notification_ids}},
+                {"$set": {"sent": True}}
+            )
+        
+        # Format notifications for response
+        formatted_notifications = [{
+            "id": str(n['_id']),
+            "type": n['type'],
+            "title": n['title'],
+            "body": n['body'],
+            "scheduled_time": n['scheduled_time'].isoformat()
+        } for n in notifications]
+        
+        return jsonify({"notifications": formatted_notifications})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/process_voice_command', methods=['POST'])
+def process_voice_command():
+    if 'user_id' not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    try:
+        data = request.get_json()
+        command = data.get('command', '').lower().strip()
+        
+        # Define command mappings
+        command_mappings = {
+            'go to dashboard': {'redirect': url_for('dashboard'), 'message': 'Navigating to dashboard'},
+            'go to tasks': {'redirect': url_for('tasks'), 'message': 'Navigating to tasks'},
+            'go to medications': {'redirect': url_for('medications'), 'message': 'Navigating to medications'},
+            'go to memory training': {'redirect': url_for('memory_training'), 'message': 'Navigating to memory training'},
+            'go to notes': {'redirect': url_for('notes'), 'message': 'Navigating to notes'},
+            'go to ai assistant': {'redirect': url_for('ai_assistant'), 'message': 'Navigating to AI assistant'},
+            'logout': {'redirect': url_for('logout'), 'message': 'Logging out'},
+            'help': {'message': 'You can say: go to dashboard, tasks, medications, memory training, notes, or AI assistant'},
+            'what can you do': {'message': 'I can help you navigate through the app. Try saying "help" to see available commands.'}
+        }
+        
+        # Check for exact matches first
+        if command in command_mappings:
+            return jsonify({
+                "status": "success",
+                **command_mappings[command]
+            })
+        
+        # Check for partial matches
+        for key, value in command_mappings.items():
+            if key in command or command in key:
+                return jsonify({
+                    "status": "success",
+                    **value
+                })
+        
+        # If no match found
+        return jsonify({
+            "status": "error",
+            "message": "I didn't understand that command. Try saying 'help' to see available commands."
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error processing command: {str(e)}"
+        }), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

@@ -2,11 +2,79 @@
 
 {% block title %}Caretaker Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Alert notifications styling */
+    .alert-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        transform: translate(50%, -50%);
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #dc3545;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: bold;
+    }
+    
+    .sos-alert {
+        animation: pulse 1.5s infinite;
+        border-left: 5px solid #dc3545;
+    }
+    
+    .patient-avatar {
+        position: relative;
+    }
+    
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        }
+    }
+    
+    .emergency-alert-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col">
         <h1 class="display-5 fw-bold">Caretaker Dashboard</h1>
         <p class="lead text-muted">Manage your patients and their care plans</p>
+    </div>
+</div>
+
+<!-- Emergency Alerts Section -->
+<div class="card mb-4 sos-alert" id="emergency-alerts-card">
+    <div class="card-header bg-danger text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i> Emergency Alerts</h5>
+            <span class="badge bg-light text-danger" id="alerts-count">0</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="emergency-alerts" class="emergency-alert-list">
+            <!-- Alerts will be populated by JavaScript -->
+            <div class="text-center py-4" id="no-alerts-message">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h5>No active emergency alerts</h5>
+                <p class="text-muted">When a patient triggers an SOS alert, it will appear here</p>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -21,11 +89,12 @@
             <div class="row">
                 {% for patient in patients %}
                     <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card h-100 border-0 shadow-sm">
+                        <div class="card h-100 border-0 shadow-sm patient-card" data-patient-id="{{ patient._id }}">
                             <div class="card-body">
                                 <div class="d-flex align-items-center mb-3">
                                     <div class="patient-avatar me-3 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                                         <i class="fas fa-user"></i>
+                                        <!-- Emergency indicator will be added here by JavaScript when needed -->
                                     </div>
                                     <div>
                                         <h5 class="mb-0">{{ patient.name }}</h5>
@@ -38,9 +107,14 @@
                                         <span class="badge bg-success">Has Notes</span>
                                     {% endif %}
                                 </div>
-                                <a href="{{ url_for('manage_patient', patient_id=patient._id) }}" class="btn btn-primary w-100">
-                                    <i class="fas fa-user-cog me-2"></i> Manage
-                                </a>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('manage_patient', patient_id=patient._id) }}" class="btn btn-primary">
+                                        <i class="fas fa-user-cog me-2"></i> Manage
+                                    </a>
+                                    <button class="btn btn-outline-danger btn-sm mt-2 contact-patient-btn" data-patient-id="{{ patient._id }}" data-patient-name="{{ patient.name }}">
+                                        <i class="fas fa-phone me-1"></i> Contact Patient
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -75,24 +149,193 @@
         </div>
     </div>
     <div class="col-md-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i> Quick Actions</h5>
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Quick Actions</h5>
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary">
-                        <i class="fas fa-chart-line me-2"></i> View Activity Reports
-                    </button>
-                    <button class="btn btn-outline-success">
-                        <i class="fas fa-bell me-2"></i> Send Medication Reminders
-                    </button>
-                    <button class="btn btn-outline-info">
-                        <i class="fas fa-file-medical me-2"></i> Generate Health Summary
-                    </button>
+                    <a href="{{ url_for('add_reference_face') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-plus me-2"></i> Manage Reference Faces
+                    </a>
+                    <a href="#" class="btn btn-outline-primary">
+                        <i class="fas fa-bell me-2"></i> Send Medication Reminder
+                    </a>
+                    <a href="#" class="btn btn-outline-primary">
+                        <i class="fas fa-tasks me-2"></i> Assign New Task
+                    </a>
+                    <a href="{{ url_for('fitness_analysis') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-chart-line me-2"></i> Patient Fitness Analysis
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Contact Patient Modal -->
+<div class="modal fade" id="contactPatientModal" tabindex="-1" aria-labelledby="contactPatientModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="contactPatientModalLabel">Contact Patient</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Contacting <span id="patient-name-placeholder"></span>...</p>
+                <div class="d-flex justify-content-center my-4">
+                    <div class="calling-animation">
+                        <i class="fas fa-phone fa-3x text-primary mb-3 fa-pulse"></i>
+                    </div>
+                </div>
+                <p class="text-center">This would initiate a real call in a production environment.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">End Call</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Mock emergency alerts data for demonstration
+    const mockEmergencyAlerts = [
+        {
+            patient_id: "{{ patients[0]._id if patients else '' }}",
+            patient_name: "{{ patients[0].name if patients else 'John Doe' }}",
+            timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 minutes ago
+            location: "Living Room",
+            status: "active"
+        }
+    ];
+    
+    // Function to update emergency alerts display
+    function updateEmergencyAlerts(alerts) {
+        const alertsContainer = document.getElementById('emergency-alerts');
+        const noAlertsMessage = document.getElementById('no-alerts-message');
+        const alertsCountBadge = document.getElementById('alerts-count');
+        const alertsCard = document.getElementById('emergency-alerts-card');
+        
+        // Clear existing alerts
+        alertsContainer.innerHTML = '';
+        
+        // Update alerts count
+        const activeAlerts = alerts.filter(alert => alert.status === 'active');
+        alertsCountBadge.textContent = activeAlerts.length;
+        
+        // Show/hide the no alerts message
+        if (activeAlerts.length === 0) {
+            alertsContainer.appendChild(noAlertsMessage);
+            alertsCard.classList.remove('sos-alert');
+        } else {
+            alertsCard.classList.add('sos-alert');
+            
+            // Add each alert to the container
+            activeAlerts.forEach(alert => {
+                const alertTime = new Date(alert.timestamp);
+                const timeString = alertTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                const alertElement = document.createElement('div');
+                alertElement.className = 'alert alert-danger mb-3';
+                alertElement.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="alert-heading mb-1">${alert.patient_name} needs help!</h5>
+                            <p class="mb-0">Location: ${alert.location}</p>
+                            <small class="text-muted">Triggered at ${timeString}</small>
+                        </div>
+                        <button class="btn btn-sm btn-danger respond-btn" data-patient-id="${alert.patient_id}">
+                            Respond
+                        </button>
+                    </div>
+                `;
+                
+                alertsContainer.appendChild(alertElement);
+                
+                // Add alert indicator to patient card
+                const patientCard = document.querySelector(`.patient-card[data-patient-id="${alert.patient_id}"]`);
+                if (patientCard) {
+                    const patientAvatar = patientCard.querySelector('.patient-avatar');
+                    
+                    // Only add the badge if it doesn't already exist
+                    if (!patientAvatar.querySelector('.alert-badge')) {
+                        const alertBadge = document.createElement('div');
+                        alertBadge.className = 'alert-badge';
+                        alertBadge.textContent = '!';
+                        patientAvatar.appendChild(alertBadge);
+                        
+                        // Add pulse animation to the patient card
+                        patientCard.classList.add('sos-alert');
+                    }
+                }
+            });
+            
+            // Add event listeners to respond buttons
+            document.querySelectorAll('.respond-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const patientId = this.getAttribute('data-patient-id');
+                    respondToEmergency(patientId);
+                });
+            });
+        }
+    }
+    
+    // Function to respond to emergency
+    function respondToEmergency(patientId) {
+        // Find the patient in the alerts
+        const alertIndex = mockEmergencyAlerts.findIndex(alert => 
+            alert.patient_id === patientId && alert.status === 'active'
+        );
+        
+        if (alertIndex !== -1) {
+            // In a real app, this would call an API to update the alert status
+            mockEmergencyAlerts[alertIndex].status = 'responded';
+            
+            // Show the contact modal for the patient
+            const patientCard = document.querySelector(`.patient-card[data-patient-id="${patientId}"]`);
+            if (patientCard) {
+                const patientName = patientCard.querySelector('h5').textContent;
+                document.getElementById('patient-name-placeholder').textContent = patientName;
+                
+                const contactModal = new bootstrap.Modal(document.getElementById('contactPatientModal'));
+                contactModal.show();
+                
+                // Remove alert indicators
+                const alertBadge = patientCard.querySelector('.alert-badge');
+                if (alertBadge) {
+                    alertBadge.remove();
+                }
+                patientCard.classList.remove('sos-alert');
+                
+                // Update the alerts display
+                updateEmergencyAlerts(mockEmergencyAlerts);
+            }
+        }
+    }
+    
+    // Function to show the contact modal
+    function showContactModal(patientId, patientName) {
+        document.getElementById('patient-name-placeholder').textContent = patientName;
+        
+        const contactModal = new bootstrap.Modal(document.getElementById('contactPatientModal'));
+        contactModal.show();
+    }
+    
+    // Document ready function
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update emergency alerts on page load
+        updateEmergencyAlerts(mockEmergencyAlerts);
+        
+        // Set up click handlers for contact buttons
+        document.querySelectorAll('.contact-patient-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const patientId = this.getAttribute('data-patient-id');
+                const patientName = this.getAttribute('data-patient-name');
+                showContactModal(patientId, patientName);
+            });
+        });
+    });
+</script>
 {% endblock %} 

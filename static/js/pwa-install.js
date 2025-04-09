@@ -1,189 +1,262 @@
-// PWA Installation Script
-let deferredPrompt;
-const installContainer = document.getElementById('install-container');
-const installButton = document.getElementById('install-button');
-let installBannerShown = false;
+/**
+ * Progressive Web App Installation & Enhancement Script
+ * Handles PWA installation, detects standalone mode, and improves user experience
+ */
 
-// Check if the app is running in standalone mode (installed PWA)
-function isRunningStandalone() {
-    return (window.matchMedia('(display-mode: standalone)').matches) || 
-           (window.matchMedia('(display-mode: fullscreen)').matches) || 
-           (window.navigator.standalone === true) || // For iOS Safari
-           (window.location.search.includes('standalone=true'));
-}
-
-// Apply standalone class to HTML if in standalone mode
-function checkStandalone() {
-    if (isRunningStandalone()) {
-        document.documentElement.classList.add('pwa-standalone');
-        document.body.classList.add('pwa-standalone');
+(function() {
+    'use strict';
+    
+    // Variables
+    let deferredPrompt;
+    const installContainer = document.getElementById('install-container');
+    const installButton = document.getElementById('install-button');
+    
+    // Check if the app is running in standalone mode
+    function isRunningStandalone() {
+        return (window.matchMedia('(display-mode: standalone)').matches) ||
+               (window.navigator.standalone) ||
+               document.referrer.includes('android-app://');
+    }
+    
+    // Apply PWA styling if running as installed app
+    function applyPWAStyling() {
+        if (isRunningStandalone()) {
+            document.documentElement.classList.add('pwa-standalone');
+            document.body.classList.add('pwa-standalone');
+            
+            // Hide any browser-only elements
+            const browserOnlyElements = document.querySelectorAll('.browser-only');
+            browserOnlyElements.forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            console.log('Running in standalone mode - PWA styling applied');
+        }
+    }
+    
+    // Show installation prompt
+    function showInstallPrompt() {
+        if (installContainer && !isRunningStandalone()) {
+            installContainer.classList.add('show');
+            installContainer.classList.remove('d-none');
+        }
+    }
+    
+    // Initialize listeners
+    function initListeners() {
+        // Listen for beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the default browser install prompt
+            e.preventDefault();
+            
+            // Store the event for later use
+            deferredPrompt = e;
+            
+            // Show install button after a delay
+            setTimeout(() => {
+                showInstallPrompt();
+            }, 3000);
+            
+            console.log('App is installable - showing install button');
+        });
         
-        // For internal links, add the standalone parameter
-        document.querySelectorAll('a[href^="/"]').forEach(link => {
-            const url = new URL(link.href, window.location.origin);
-            if (!url.searchParams.has('standalone')) {
-                url.searchParams.set('standalone', 'true');
-                link.href = url.toString();
+        // Listen for app installed event
+        window.addEventListener('appinstalled', () => {
+            // Hide install prompt
+            if (installContainer) {
+                installContainer.classList.remove('show');
+            }
+            
+            // Clear the deferredPrompt
+            deferredPrompt = null;
+            
+            // Show success message
+            showInstallSuccess();
+            
+            console.log('App was installed successfully');
+            
+            // Send analytics
+            if (typeof gtag === 'function') {
+                gtag('event', 'pwa_install', {
+                    'event_category': 'engagement',
+                    'event_label': 'PWA Installed'
+                });
+            }
+        });
+        
+        // Add click handler to install button
+        if (installButton) {
+            installButton.addEventListener('click', async () => {
+                if (!deferredPrompt) {
+                    return;
+                }
+                
+                // Show the install prompt
+                deferredPrompt.prompt();
+                
+                // Wait for the user to respond to the prompt
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                // Log the outcome
+                console.log(`User ${outcome} the installation`);
+                
+                // Send analytics
+                if (typeof gtag === 'function') {
+                    gtag('event', 'install_prompt_response', {
+                        'event_category': 'engagement',
+                        'event_label': outcome
+                    });
+                }
+                
+                // Clear the deferredPrompt variable
+                deferredPrompt = null;
+                
+                // Hide the install button
+                installContainer.classList.remove('show');
+            });
+        }
+        
+        // Handle visibility change for better UX
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                // Refresh dynamic content if needed when app comes to foreground
+                refreshDynamicContent();
             }
         });
     }
-}
-
-// Handle the beforeinstallprompt event
-window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent the mini-infobar from appearing on mobile
-    e.preventDefault();
-    // Store the event so it can be triggered later
-    deferredPrompt = e;
-    // Show the install button
-    if (installContainer && !isRunningStandalone() && !installBannerShown) {
-        installContainer.classList.remove('d-none');
-        installContainer.classList.add('d-block');
-    }
-});
-
-// Handle the install button click
-if (installButton) {
-    installButton.addEventListener('click', async () => {
-        if (!deferredPrompt) {
-            // The deferred prompt isn't available
-            // This could happen if the app is already installed or cannot be installed
-            showInstallInstructions();
-            return;
+    
+    // Show installation success toast
+    function showInstallSuccess() {
+        // Create toast container if not exists
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
         }
         
-        // Hide the install button
-        installContainer.classList.add('d-none');
-        installBannerShown = true;
+        // Create toast element
+        const toastEl = document.createElement('div');
+        toastEl.className = 'toast';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
         
-        // Show the install prompt
-        deferredPrompt.prompt();
-        
-        // Wait for the user to respond to the prompt
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User ${outcome} the installation`);
-        
-        // We've used the prompt, and can't use it again, throw it away
-        deferredPrompt = null;
-        
-        // If rejected, show a custom banner after delay
-        if (outcome === 'dismissed') {
-            localStorage.setItem('installPromptDismissed', Date.now());
-            setTimeout(showCustomInstallBanner, 300000); // Show after 5 minutes
-        }
-    });
-}
-
-// Show custom install banner for browsers that don't support beforeinstallprompt
-function showCustomInstallBanner() {
-    if (isRunningStandalone() || installBannerShown) return;
-    
-    // Check if we've previously shown install banner recently
-    const lastDismissed = localStorage.getItem('installPromptDismissed');
-    if (lastDismissed && (Date.now() - lastDismissed < 86400000)) { // 24 hours
-        return;
-    }
-    
-    // Create and show the banner
-    const banner = document.createElement('div');
-    banner.className = 'add-to-home';
-    banner.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
-            <div>Install this app for a better experience!</div>
-            <button class="btn btn-sm btn-light" id="close-banner">×</button>
-        </div>
-    `;
-    document.body.prepend(banner);
-    
-    // Show the banner with animation
-    setTimeout(() => {
-        banner.classList.add('show');
-        installBannerShown = true;
-    }, 500);
-    
-    // Handle close button
-    document.getElementById('close-banner').addEventListener('click', () => {
-        banner.classList.remove('show');
-        localStorage.setItem('installPromptDismissed', Date.now());
-    });
-}
-
-// For browsers that don't support the installation API
-function showInstallInstructions() {
-    // Detect iOS Safari
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    
-    let message = '';
-    
-    if (isIOS && isSafari) {
-        message = 'To install this app on your iOS device: tap the Share button, then "Add to Home Screen"';
-    } else if (navigator.userAgent.indexOf('Firefox') !== -1) {
-        message = 'To install this app in Firefox: tap the menu button (three dots), then "Install"';
-    } else {
-        message = 'To install this app: open in Chrome, tap the menu button, then "Install App"';
-    }
-    
-    alert(message);
-}
-
-// Detect when the PWA has been successfully installed
-window.addEventListener('appinstalled', (evt) => {
-    console.log('MemoryCare app was installed');
-    installContainer.classList.add('d-none');
-    
-    // You could add analytics tracking here
-    // gtag('event', 'pwa_install_success');
-    
-    // Show a success message
-    const toast = document.createElement('div');
-    toast.className = 'position-fixed bottom-0 end-0 p-3';
-    toast.style.zIndex = '5';
-    toast.innerHTML = `
-        <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+        // Toast content
+        toastEl.innerHTML = `
             <div class="toast-header">
-                <strong class="me-auto">MemoryCare Installed</strong>
+                <i class="fas fa-check-circle me-2 text-success"></i>
+                <strong class="me-auto">ReMind Installed</strong>
                 <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
             <div class="toast-body">
-                App successfully installed! You can now access it from your home screen.
+                ReMind has been successfully installed on your device!
             </div>
-        </div>
-    `;
-    document.body.appendChild(toast);
+        `;
+        
+        // Add toast to container
+        toastContainer.appendChild(toastEl);
+        
+        // Initialize and show the toast
+        const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
+        toast.show();
+        
+        // Remove toast from DOM after it's hidden
+        toastEl.addEventListener('hidden.bs.toast', () => {
+            toastEl.remove();
+        });
+    }
     
-    // Remove toast after 5 seconds
-    setTimeout(() => {
-        document.body.removeChild(toast);
-    }, 5000);
-});
-
-// Check for standalone mode on page load
-document.addEventListener('DOMContentLoaded', () => {
-    checkStandalone();
-    
-    // Show install banner based on user interactions
-    let userInteracted = false;
-    const registerUserInteraction = () => {
-        userInteracted = true;
-        // After user has interacted, we can show the install banner
-        // but add delay to not be intrusive
-        if (!isRunningStandalone() && !installBannerShown && !deferredPrompt) {
-            setTimeout(showCustomInstallBanner, 10000); // 10 seconds after interaction
+    // Refresh dynamic content (implemented separately for each page if needed)
+    function refreshDynamicContent() {
+        // Refresh time displays
+        const timeElements = document.querySelectorAll('[data-dynamic="time"]');
+        if (timeElements.length > 0) {
+            const now = new Date();
+            timeElements.forEach(el => {
+                el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            });
         }
         
-        // Remove event listeners once triggered
-        document.removeEventListener('click', registerUserInteraction);
-        document.removeEventListener('scroll', registerUserInteraction);
-    };
-    
-    document.addEventListener('click', registerUserInteraction);
-    document.addEventListener('scroll', registerUserInteraction);
-    
-    // Check for parameters in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('standalone') && urlParams.get('standalone') === 'true') {
-        document.documentElement.classList.add('pwa-standalone');
-        document.body.classList.add('pwa-standalone');
+        // Call page-specific refresh functions if they exist
+        if (typeof refreshPageData === 'function') {
+            refreshPageData();
+        }
     }
-}); 
+    
+    // Check online status and update UI accordingly
+    function setupOfflineDetection() {
+        function updateOnlineStatus() {
+            const condition = navigator.onLine ? 'online' : 'offline';
+            
+            // Add/remove offline class from body
+            document.body.classList.toggle('offline', !navigator.onLine);
+            
+            // Show appropriate alert
+            if (!navigator.onLine) {
+                showOfflineAlert();
+            } else {
+                hideOfflineAlert();
+            }
+            
+            console.log(`App is now ${condition}`);
+        }
+        
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        // Initial check
+        updateOnlineStatus();
+    }
+    
+    // Show offline alert
+    function showOfflineAlert() {
+        // Don't show again if already exists
+        if (document.querySelector('.offline-alert')) {
+            return;
+        }
+        
+        const alertEl = document.createElement('div');
+        alertEl.className = 'offline-alert alert alert-warning alert-dismissible fade show';
+        alertEl.setAttribute('role', 'alert');
+        alertEl.innerHTML = `
+            <i class="fas fa-wifi-slash me-2"></i>
+            <strong>You're offline.</strong> Some features may be limited.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        // Prepend to container
+        const container = document.querySelector('.container');
+        if (container) {
+            container.prepend(alertEl);
+        }
+    }
+    
+    // Hide offline alert
+    function hideOfflineAlert() {
+        const alertEl = document.querySelector('.offline-alert');
+        if (alertEl) {
+            const bsAlert = new bootstrap.Alert(alertEl);
+            bsAlert.close();
+        }
+    }
+    
+    // Initialize all functionality
+    function init() {
+        applyPWAStyling();
+        initListeners();
+        setupOfflineDetection();
+        
+        // Set periodic refresh for dynamic content
+        setInterval(refreshDynamicContent, 60000); // Every minute
+        
+        console.log('PWA enhancement script initialized');
+    }
+    
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})(); 

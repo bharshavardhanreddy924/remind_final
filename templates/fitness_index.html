@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fitness Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #4f46e5;
+            --accent: #10b981;
+            --dark: #1e293b;
+            --light: #ffffff;
+            --text: #374151;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--light);
+            font-family: 'Poppins', sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 3rem 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--dark);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .chart-container {
+            background: var(--light);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid #e5e7eb;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: var(--dark);
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+            border-left: 4px solid var(--primary);
+            background: #f8fafc;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+        }
+
+        button {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 30px;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 0.5rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(99,102,241,0.2);
+        }
+
+        canvas {
+            max-height: 400px;
+            width: 100% !important;
+        }
+
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .header {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Fitness Dashboard</h1>
+        <a href="/"><button>Home</button></a>
+    </div>
+
+    <div class="chart-grid">
+        <!-- Steps Chart -->
+        <div class="chart-container">
+            <h2>Step Count (Last 7 Days)</h2>
+            <canvas id="stepsChart"></canvas>
+        </div>
+
+        <!-- Heart Rate Chart -->
+        <div class="chart-container">
+            <h2>Heart Rate Readings</h2>
+            <canvas id="hrChart"></canvas>
+        </div>
+
+        <!-- Sleep Chart -->
+        <div class="chart-container">
+            <h2>Sleep Analysis (Minutes)</h2>
+            <canvas id="sleepChart"></canvas>
+        </div>
+
+        <!-- Calories Chart -->
+        <div class="chart-container">
+            <h2>Calories Burned (Last 7 Days)</h2>
+            <canvas id="caloriesChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Hardcoded Sample Data
+        const steps = {
+            dates: ['2024-03-19', '2024-03-20', '2024-03-21', '2024-03-22', '2024-03-23', '2024-03-24', '2024-03-25'],
+            steps: [5000, 6200, 4800, 7500, 5600, 6100, 5300]
+        };
+
+        const heartRate = {
+            timestamps: [
+                '2024-03-19T12:00:00',
+                '2024-03-20T12:00:00',
+                '2024-03-21T12:00:00',
+                '2024-03-22T12:00:00',
+                '2024-03-23T12:00:00',
+                '2024-03-24T12:00:00',
+                '2024-03-25T12:00:00'
+            ],
+            values: [72.5, 75.2, 70.8, 73.6, 71.9, 74.3, 69.5]
+        };
+
+        const sleep = {
+            dates: ['2024-03-19', '2024-03-20', '2024-03-21', '2024-03-22', '2024-03-23', '2024-03-24', '2024-03-25'],
+            Awake: [30, 25, 20, 35, 40, 30, 25],
+            Light: [240, 260, 220, 250, 230, 270, 280],
+            Deep: [90, 100, 110, 80, 95, 85, 105],
+            REM: [60, 65, 70, 55, 75, 65, 60]
+        };
+
+        const calories = {
+            dates: ['2024-03-19', '2024-03-20', '2024-03-21', '2024-03-22', '2024-03-23', '2024-03-24', '2024-03-25'],
+            calories: [2100.5, 2300.2, 1950.7, 2400.1, 2200.3, 2150.6, 2050.4]
+        };
+
+        // Common chart options
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#374151',
+                        font: {
+                            size: 14
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: '#f3f4f6' },
+                    ticks: { color: '#6b7280' }
+                },
+                y: {
+                    grid: { color: '#f3f4f6' },
+                    ticks: { color: '#6b7280' }
+                }
+            }
+        };
+
+        // Steps Chart
+        new Chart(document.getElementById('stepsChart'), {
+            type: 'bar',
+            data: {
+                labels: steps.dates,
+                datasets: [{
+                    label: 'Steps',
+                    data: steps.steps,
+                    backgroundColor: '#6366f1',
+                    borderColor: '#4f46e5',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    barThickness: 30,
+                }]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    ...chartOptions.scales,
+                    y: { 
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Steps',
+                            color: '#6b7280'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Heart Rate Chart
+        new Chart(document.getElementById('hrChart'), {
+            type: 'line',
+            data: {
+                labels: heartRate.timestamps,
+                datasets: [{
+                    label: 'Heart Rate (BPM)',
+                    data: heartRate.values,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239,68,68,0.1)',
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#fff',
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    x: {
+                        ...chartOptions.scales.x,
+                        type: 'time',
+                        time: { unit: 'day', tooltipFormat: 'MMM d' }
+                    },
+                    y: { 
+                        ...chartOptions.scales.y,
+                        title: { display: true, text: 'BPM', color: '#6b7280' }
+                    }
+                }
+            }
+        });
+
+        // Sleep Chart
+        new Chart(document.getElementById('sleepChart'), {
+            type: 'bar',
+            data: {
+                labels: sleep.dates,
+                datasets: [
+                    {
+                        label: 'Awake',
+                        data: sleep.Awake,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 8
+                    },
+                    {
+                        label: 'Light Sleep',
+                        data: sleep.Light,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 8
+                    },
+                    {
+                        label: 'Deep Sleep',
+                        data: sleep.Deep,
+                        backgroundColor: '#10b981',
+                        borderRadius: 8
+                    },
+                    {
+                        label: 'REM Sleep',
+                        data: sleep.REM,
+                        backgroundColor: '#8b5cf6',
+                        borderRadius: 8
+                    }
+                ]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    x: { 
+                        ...chartOptions.scales.x,
+                        stacked: true
+                    },
+                    y: { 
+                        ...chartOptions.scales.y,
+                        stacked: true,
+                        title: { display: true, text: 'Minutes', color: '#6b7280' }
+                    }
+                }
+            }
+        });
+
+        // Calories Chart
+        new Chart(document.getElementById('caloriesChart'), {
+            type: 'bar',
+            data: {
+                labels: calories.dates,
+                datasets: [{
+                    label: 'Calories',
+                    data: calories.calories,
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#d97706',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    barThickness: 30,
+                }]
+            },
+            options: {
+                ...chartOptions,
+                scales: {
+                    ...chartOptions.scales,
+                    y: { 
+                        beginAtZero: true,
+                        title: { display: true, text: 'Calories', color: '#6b7280' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -122,7 +122,7 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             
             // Send request to server
-            fetch('{{ url_for('ai_response') }}', {
+            fetch("{{ url_for('ai_response') }}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

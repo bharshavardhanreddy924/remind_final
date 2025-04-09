@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Location{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map {
+        height: 500px;
+        width: 100%;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .location-info {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .location-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding: 10px;
+        border-radius: 6px;
+        background: #e8f5e9;
+        color: #28a745;
+    }
+    
+    .location-status i {
+        font-size: 1.2em;
+    }
+    
+    .location-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .detail-item {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 6px;
+    }
+    
+    .detail-item label {
+        display: block;
+        font-size: 0.8em;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    
+    .detail-item span {
+        font-size: 1.1em;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Patient Location</h2>
+    
+    <div class="location-info">
+        <div class="location-status">
+            <i class="fas fa-circle"></i>
+            <span>📍 St. Joseph College of Engineering</span>
+        </div>
+        <div class="location-details">
+            <div class="detail-item">
+                <label>Address</label>
+                <span>St. Joseph College of Engineering, Chennai, Tamil Nadu, India</span>
+            </div>
+            <div class="detail-item">
+                <label>Coordinates</label>
+                <span>12.8699° N, 80.2184° E</span>
+            </div>
+            <div class="detail-item">
+                <label>Last Updated</label>
+                <span id="last-update">Just now</span>
+            </div>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let map;
+    let marker;
+    
+    function initMap() {
+        // Initialize map centered on St. Joseph College of Engineering
+        const collegeLocation = [12.8699, 80.2184];
+        map = L.map('map').setView(collegeLocation, 15);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Add marker for the college
+        const customIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<i class="fas fa-map-marker-alt"></i>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30]
+        });
+        
+        marker = L.marker(collegeLocation, { icon: customIcon }).addTo(map);
+        
+        // Add a circle to show the campus area
+        L.circle(collegeLocation, {
+            color: '#4E7ADC',
+            fillColor: '#4E7ADC',
+            fillOpacity: 0.15,
+            radius: 200 // 200 meters radius
+        }).addTo(map);
+    }
+    
+    // Initialize map when the page loads
+    document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}

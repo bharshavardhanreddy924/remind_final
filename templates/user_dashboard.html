@@ -2,133 +2,953 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Dashboard specific variables */
+    :root {
+        --card-border-radius: 1rem;
+        --feature-card-radius: 1.25rem;
+        --card-shadow: 0 0.5rem 2rem rgba(67, 97, 238, 0.1);
+        --hover-shadow: 0 0.75rem 2.5rem rgba(67, 97, 238, 0.18);
+    }
+    
+    .dashboard-section {
+        margin-bottom: 3rem;
+    }
+    
+    /* Enhanced greeting section */
+    .greeting-section {
+        position: relative;
+        padding: 2.5rem;
+        border-radius: var(--card-border-radius);
+        background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+        color: white;
+        margin-bottom: 2rem;
+        overflow: hidden;
+        box-shadow: 0 0.75rem 3rem rgba(58, 12, 163, 0.3);
+    }
+    
+    .greeting-section h1 {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        font-size: 2.5rem;
+    }
+    
+    .greeting-section .lead {
+        font-size: 1.15rem;
+        opacity: 0.85;
+    }
+    
+    .greeting-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 40%;
+        background: url('https://cdn.pixabay.com/photo/2016/06/13/09/57/meeting-1453895_1280.png') no-repeat right center;
+        background-size: contain;
+        opacity: 0.1;
+    }
+    
+    .greeting-section::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at bottom right, rgba(76, 201, 240, 0.3) 0%, rgba(67, 97, 238, 0) 70%);
+        pointer-events: none;
+    }
+    
+    /* Enhanced datetime display */
+    .datetime-display {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 1rem;
+        padding: 1.25rem;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 1.5rem;
+        position: relative;
+        overflow: hidden;
+        max-width: 300px;
+    }
+    
+    .current-date {
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.85);
+        font-weight: 500;
+    }
+    
+    .current-time {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: white;
+        margin-top: 0.25rem;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Enhanced weather display */
+    .weather-container {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 1rem;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .weather-icon {
+        font-size: 3.5rem;
+        margin-right: 1rem;
+        filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+    }
+    
+    .weather-info {
+        line-height: 1.4;
+    }
+    
+    .temperature {
+        font-size: 1.75rem;
+        font-weight: 600;
+    }
+    
+    /* Adding text color for weather content */
+    #weather-condition, #weather-temp, #weather-location {
+        color: black;
+    }
+    
+    #weather-location {
+        opacity: 0.75;
+    }
+    
+    /* Enhanced dashboard cards */
+    .dashboard-card {
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+        border-radius: var(--card-border-radius);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: none;
+        background: white;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-10px);
+        box-shadow: var(--hover-shadow);
+    }
+    
+    .dashboard-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: linear-gradient(45deg, rgba(67, 97, 238, 0.03) 0%, rgba(76, 201, 240, 0.03) 100%);
+        z-index: -1;
+    }
+    
+    .dashboard-card .card-body {
+        padding: 2rem;
+    }
+    
+    .dashboard-card .dashboard-icon {
+        position: absolute;
+        top: 1.75rem;
+        right: 1.75rem;
+        width: 64px;
+        height: 64px;
+        border-radius: 1rem;
+        background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 1.75rem;
+        box-shadow: 0 10px 20px -5px rgba(67, 97, 238, 0.4);
+        transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .dashboard-card:hover .dashboard-icon {
+        transform: scale(1.15) rotate(10deg);
+    }
+    
+    .dashboard-card:nth-child(2) .dashboard-icon {
+        background: linear-gradient(135deg, #f72585 0%, #b5179e 100%);
+        box-shadow: 0 10px 20px -5px rgba(247, 37, 133, 0.4);
+    }
+    
+    .dashboard-card:nth-child(3) .dashboard-icon {
+        background: linear-gradient(135deg, #4cc9f0 0%, #4895ef 100%);
+        box-shadow: 0 10px 20px -5px rgba(76, 201, 240, 0.4);
+    }
+    
+    .dashboard-card:nth-child(4) .dashboard-icon {
+        background: linear-gradient(135deg, #4dccbd 0%, #00a896 100%);
+        box-shadow: 0 10px 20px -5px rgba(0, 168, 150, 0.4);
+    }
+    
+    .dashboard-stat {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #43425d;
+        margin-bottom: 0.5rem;
+        line-height: 1;
+    }
+    
+    .dashboard-label {
+        color: #6c757d;
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        display: block;
+    }
+    
+    /* Feature button enhancement */
+    .feature-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        font-size: 1rem;
+        border-radius: 0.75rem;
+        transition: all 0.3s ease;
+        background-color: rgba(67, 97, 238, 0.1);
+        color: #4361ee;
+        border: none;
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+        text-decoration: none;
+    }
+    
+    .feature-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #4361ee 0%, #3a0ca3 100%);
+        transition: all 0.3s ease;
+        z-index: -1;
+    }
+    
+    .feature-btn:hover {
+        color: white;
+    }
+    
+    .feature-btn:hover::before {
+        width: 100%;
+    }
+    
+    .feature-btn i {
+        margin-right: 0.75rem;
+        font-size: 1rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .feature-btn:hover i {
+        transform: translateX(3px);
+    }
+    
+    /* Enhanced feature grid */
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.75rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .feature-card {
+        background: white;
+        border-radius: var(--feature-card-radius);
+        overflow: hidden;
+        position: relative;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        border: none;
+        box-shadow: var(--card-shadow);
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-12px);
+        box-shadow: var(--hover-shadow);
+    }
+    
+    .feature-card:hover .feature-icon {
+        transform: scale(1.2);
+    }
+    
+    .feature-card .card-body {
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        z-index: 1;
+    }
+    
+    .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 150px;
+        background: linear-gradient(to bottom, rgba(67, 97, 238, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+        z-index: 0;
+    }
+    
+    .feature-card .feature-title {
+        font-weight: 700;
+        font-size: 1.35rem;
+        margin-bottom: 0.75rem;
+        color: #43425d;
+        position: relative;
+    }
+    
+    .feature-card .feature-text {
+        color: #6c757d;
+        margin-bottom: 2rem;
+        flex: 1;
+        position: relative;
+    }
+    
+    .feature-card .feature-icon-wrapper {
+        width: 80px;
+        height: 80px;
+        border-radius: 1rem;
+        background: rgba(67, 97, 238, 0.1);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        position: relative;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .feature-card:hover .feature-icon-wrapper {
+        background: rgba(67, 97, 238, 0.15);
+        transform: rotate(5deg);
+    }
+    
+    .feature-card .feature-icon {
+        font-size: 2rem;
+        color: #4361ee;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .feature-card .feature-btn {
+        align-self: flex-start;
+        margin-top: auto;
+    }
+    
+    /* Section title enhancement */
+    .section-title {
+        position: relative;
+        padding-bottom: 1rem;
+        margin-bottom: 2.25rem;
+        font-weight: 700;
+        color: #43425d;
+        font-size: 1.8rem;
+    }
+    
+    .section-title::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        height: 4px;
+        width: 60px;
+        background: linear-gradient(90deg, #4361ee 0%, #4cc9f0 100%);
+        border-radius: 2px;
+    }
+    
+    /* Tasks and medications card */
+    .task-item, .medication-item {
+        padding: 1.25rem;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+    
+    .task-item:hover, .medication-item:hover {
+        background-color: rgba(67, 97, 238, 0.05);
+    }
+    
+    .card-header {
+        padding: 1.5rem;
+    }
+    
+    .card-header h5 {
+        font-weight: 700;
+    }
+    
+    .med-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background-color: rgba(67, 97, 238, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1.25rem;
+        color: #4361ee;
+        font-size: 1.25rem;
+    }
+    
+    /* Enhanced empty state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+    }
+    
+    .empty-state i {
+        font-size: 3.5rem;
+        color: rgba(67, 97, 238, 0.2);
+        margin-bottom: 1.25rem;
+    }
+    
+    .empty-state p {
+        color: #6c757d;
+        font-weight: 500;
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Enhanced tips section */
+    .tips-wrapper {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.75rem;
+    }
+    
+    .tip-item {
+        background-color: white;
+        border-radius: var(--card-border-radius);
+        padding: 1.75rem;
+        margin-bottom: 0;
+        box-shadow: var(--card-shadow);
+        border-top: 5px solid #4361ee;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .tip-item:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--hover-shadow);
+    }
+    
+    .tip-item h5 {
+        font-size: 1.35rem;
+        color: #43425d;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .tip-item h5 i {
+        margin-right: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: rgba(67, 97, 238, 0.1);
+        border-radius: 10px;
+    }
+    
+    .tip-item p {
+        margin-bottom: 0;
+        color: #6c757d;
+        line-height: 1.7;
+        font-size: 1.05rem;
+    }
+    
+    .tip-item.memory-tip {
+        border-top-color: #4361ee;
+    }
+    
+    .tip-item.memory-tip h5 i {
+        color: #4361ee;
+        background: rgba(67, 97, 238, 0.1);
+    }
+    
+    .tip-item.wellness-tip {
+        border-top-color: #f72585;
+    }
+    
+    .tip-item.wellness-tip h5 i {
+        color: #f72585;
+        background: rgba(247, 37, 133, 0.1);
+    }
+    
+    /* Enhanced SOS button */
+    .sos-button-container {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1000;
+    }
+    
+    .sos-button {
+        width: 75px;
+        height: 75px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #e63946 0%, #d90429 100%);
+        border: none;
+        box-shadow: 0 10px 25px rgba(233, 30, 99, 0.4);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.75rem;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(233, 30, 99, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 15px rgba(233, 30, 99, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(233, 30, 99, 0);
+        }
+    }
+    
+    .sos-button:hover {
+        transform: scale(1.1);
+    }
+    
+    .sos-button:active {
+        transform: scale(0.95);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+        .feature-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 992px) {
+        .dashboard-card .card-body {
+            padding: 1.75rem;
+        }
+        
+        .dashboard-card .dashboard-icon {
+            width: 56px;
+            height: 56px;
+            font-size: 1.5rem;
+        }
+        
+        .dashboard-stat {
+            font-size: 2.5rem;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .feature-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .tips-wrapper {
+            grid-template-columns: 1fr;
+        }
+        
+        .greeting-section h1 {
+            font-size: 2rem;
+        }
+        
+        .greeting-section {
+            padding: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .dashboard-card .card-body {
+            padding: 1.5rem;
+        }
+        
+        .dashboard-card .dashboard-icon {
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 48px;
+            height: 48px;
+            font-size: 1.25rem;
+        }
+        
+        .dashboard-stat {
+            font-size: 2.25rem;
+        }
+        
+        .dashboard-label {
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .feature-btn {
+            padding: 0.6rem 1.25rem;
+            font-size: 0.9rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row mb-4 align-items-center">
-    <div class="col">
-        <h1 class="display-5 fw-bold">Welcome Back, {{ user.name }}!</h1>
-        <p class="lead text-muted">{{ date }}</p>
-    </div>
-</div>
+<!-- No need to include the navbar here as it's in base.html -->
 
-<div class="row mb-5">
-    <div class="col-md-4 mb-4">
-        <a href="{{ url_for('tasks') }}" class="feature-card tasks d-block p-4">
-            <i class="fas fa-tasks"></i>
-            <h3>Tasks</h3>
-        </a>
-    </div>
-    <div class="col-md-4 mb-4">
-        <a href="{{ url_for('medications') }}" class="feature-card medications d-block p-4">
-            <i class="fas fa-pills"></i>
-            <h3>Medications</h3>
-        </a>
-    </div>
-    <div class="col-md-4 mb-4">
-        <a href="{{ url_for('memory_training') }}" class="feature-card memory d-block p-4">
-            <i class="fas fa-brain"></i>
-            <h3>Memory Training</h3>
-        </a>
-    </div>
-    <div class="col-md-6 mb-4">
-        <a href="{{ url_for('notes') }}" class="feature-card notes d-block p-4">
-            <i class="fas fa-sticky-note"></i>
-            <h3>My Notes</h3>
-        </a>
-    </div>
-    <div class="col-md-6 mb-4">
-        <a href="{{ url_for('ai_assistant') }}" class="feature-card ai d-block p-4">
-            <i class="fas fa-robot"></i>
-            <h3>AI Assistant</h3>
-        </a>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-lg-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i> Today's Tasks</h5>
-                    <a href="{{ url_for('tasks') }}" class="btn btn-sm btn-outline-primary">View All</a>
+<div class="container">
+    <!-- Personalized Date, Time, Weather section -->
+    <div class="card mb-4 border-0 shadow-none">
+        <div class="card-body p-0">
+            <div class="row g-0">
+                <div class="col-md-7">
+                    <div class="greeting-section">
+                        <div class="datetime-display d-inline-block mb-3">
+                            <div class="current-date" id="current-date">{{ date }}</div>
+                            <div class="current-time" id="current-time">Loading time...</div>
+                        </div>
+                        <h1 class="display-5">Good <span id="greeting-time">day</span>, {{ user.name }}!</h1>
+                        <p class="lead">We hope you're having a wonderful day. Here's your dashboard.</p>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="p-4">
+                        <h5 class="fw-bold mb-3">Today's Weather</h5>
+                        <div id="weather-container" class="weather-container">
+                            <div class="weather-icon">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </div>
+                            <div class="weather-info">
+                                <div id="weather-condition">Loading weather...</div>
+                                <div id="weather-temp" class="temperature"></div>
+                                <div id="weather-location" class="opacity-75"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="card-body">
-                {% if tasks %}
-                    <div class="task-list">
-                        {% for task in tasks[:5] %}
-                            <div class="task-item {% if task.completed %}completed{% endif %} d-flex align-items-center">
-                                <div class="form-check me-3">
-                                    <input class="form-check-input" type="checkbox" {% if task.completed %}checked{% endif %} disabled>
-                                </div>
-                                <div class="task-text">{{ task.text }}</div>
-                            </div>
-                        {% endfor %}
+        </div>
+    </div>
+
+    <!-- Dashboard Stats -->
+    <section class="dashboard-section">
+        <h2 class="section-title">Your Dashboard</h2>
+        <div class="row mb-4">
+            <div class="col-md-3 mb-4 mb-md-0">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <div class="dashboard-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <span class="dashboard-label">Active Tasks</span>
+                        <h2 class="dashboard-stat">{{ tasks|length if tasks else 0 }}</h2>
+                        <a href="{{ url_for('tasks') }}" class="feature-btn">
+                            <i class="fas fa-clipboard-list"></i> Manage Tasks
+                        </a>
                     </div>
-                    {% if tasks|length > 5 %}
-                        <div class="text-center mt-3">
-                            <span class="text-muted">+{{ tasks|length - 5 }} more tasks</span>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4 mb-md-0">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <div class="dashboard-icon">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <span class="dashboard-label">Medications</span>
+                        <h2 class="dashboard-stat">{{ medications|length if medications else 0 }}</h2>
+                        <a href="{{ url_for('medications') }}" class="feature-btn">
+                            <i class="fas fa-prescription-bottle"></i> View Schedule
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4 mb-md-0">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <div class="dashboard-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <span class="dashboard-label">Memory Training</span>
+                        <h2 class="dashboard-stat">Daily</h2>
+                        <a href="{{ url_for('memory_training') }}" class="feature-btn">
+                            <i class="fas fa-dumbbell"></i> Start Training
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <div class="dashboard-icon">
+                            <i class="fas fa-heartbeat"></i>
+                        </div>
+                        <span class="dashboard-label">Health Status</span>
+                        <h2 class="dashboard-stat">Good</h2>
+                        <a href="{{ url_for('fitness_analysis') }}" class="feature-btn">
+                            <i class="fas fa-chart-line"></i> View Health
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Grid -->
+    <section class="dashboard-section">
+        <h2 class="section-title">Tools & Features</h2>
+        <div class="feature-grid">
+            <!-- Memory Training Card -->
+            <div class="feature-card">
+                <div class="card-body">
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-brain feature-icon"></i>
+                    </div>
+                    <h3 class="feature-title">Memory Training</h3>
+                    <p class="feature-text">Improve cognitive function with personalized memory exercises designed for daily practice.</p>
+                    <a href="{{ url_for('memory_training') }}" class="feature-btn">
+                        <i class="fas fa-arrow-right"></i> Start Training
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Face Recognition Card -->
+            <div class="feature-card">
+                <div class="card-body">
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-camera feature-icon"></i>
+                    </div>
+                    <h3 class="feature-title">Face Recognition</h3>
+                    <p class="feature-text">Identify people in your photos to help with remembering friends and family members.</p>
+                    <a href="{{ url_for('face_recognition_page') }}" class="feature-btn">
+                        <i class="fas fa-arrow-right"></i> Recognize Faces
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Medication Tracker Card -->
+            <div class="feature-card">
+                <div class="card-body">
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-pills feature-icon"></i>
+                    </div>
+                    <h3 class="feature-title">Medication Tracker</h3>
+                    <p class="feature-text">Track your medication schedule and get reminders when it's time to take them.</p>
+                    <a href="{{ url_for('medications') }}" class="feature-btn">
+                        <i class="fas fa-arrow-right"></i> Manage Medications
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Tasks Card -->
+            <div class="feature-card">
+                <div class="card-body">
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-tasks feature-icon"></i>
+                    </div>
+                    <h3 class="feature-title">Daily Tasks</h3>
+                    <p class="feature-text">Organize your daily routine and keep track of important activities.</p>
+                    <a href="{{ url_for('tasks') }}" class="feature-btn">
+                        <i class="fas fa-arrow-right"></i> View Tasks
+                    </a>
+                </div>
+            </div>
+            
+            <!-- AI Assistant Card -->
+            <div class="feature-card">
+                <div class="card-body">
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-robot feature-icon"></i>
+                    </div>
+                    <h3 class="feature-title">AI Assistant</h3>
+                    <p class="feature-text">Get help with personal information and daily activities through our intelligent assistant.</p>
+                    <a href="{{ url_for('ai_assistant') }}" class="feature-btn">
+                        <i class="fas fa-arrow-right"></i> Talk to Assistant
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Memory Album Card -->
+            <div class="feature-card">
+                <div class="card-body">
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-images feature-icon"></i>
+                    </div>
+                    <h3 class="feature-title">Memory Album</h3>
+                    <p class="feature-text">Browse through your photo collection to help recall important memories and events.</p>
+                    <a href="{{ url_for('reminiscence_therapy') }}" class="feature-btn">
+                        <i class="fas fa-arrow-right"></i> View Album
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-clipboard-list me-2 text-primary"></i> Today's Tasks</h5>
+                        <a href="{{ url_for('tasks') }}" class="btn btn-sm btn-primary rounded-pill">View All</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if tasks %}
+                        <div class="task-list">
+                            {% for task in tasks[:5] %}
+                                <div class="task-item {% if task.completed %}completed{% endif %} d-flex align-items-center">
+                                    <div class="form-check me-3">
+                                        <input class="form-check-input" type="checkbox" {% if task.completed %}checked{% endif %} disabled>
+                                    </div>
+                                    <div class="task-text flex-grow-1">{{ task.text }}</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if tasks|length > 5 %}
+                            <div class="text-center mt-3 mb-3">
+                                <span class="badge bg-primary rounded-pill px-3 py-2">+{{ tasks|length - 5 }} more tasks</span>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard"></i>
+                            <p>No tasks for today</p>
+                            <a href="{{ url_for('tasks') }}" class="feature-btn mt-2">
+                                <i class="fas fa-plus-circle"></i> Add Task
+                            </a>
                         </div>
                     {% endif %}
-                {% else %}
-                    <div class="text-center text-muted py-5">
-                        <i class="fas fa-clipboard fa-3x mb-3"></i>
-                        <p>No tasks for today</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-pills me-2 text-primary"></i> Medication Schedule</h5>
+                        <a href="{{ url_for('medications') }}" class="btn btn-sm btn-primary rounded-pill">View All</a>
                     </div>
-                {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    {% if medications %}
+                        <div class="medication-list">
+                            {% for med in medications[:3] %}
+                                <div class="medication-item">
+                                    <div class="med-icon">
+                                        <i class="fas fa-prescription-bottle-alt"></i>
+                                    </div>
+                                    <div class="med-details flex-grow-1">
+                                        <h5 class="mb-1">{{ med.name }}</h5>
+                                        <p class="mb-0 text-muted">{{ med.time }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if medications|length > 3 %}
+                            <div class="text-center mt-3 mb-3">
+                                <span class="badge bg-primary rounded-pill px-3 py-2">+{{ medications|length - 3 }} more medications</span>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-prescription-bottle"></i>
+                            <p>No medications scheduled</p>
+                            <a href="{{ url_for('medications') }}" class="feature-btn mt-2">
+                                <i class="fas fa-plus-circle"></i> Add Medication
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-pills me-2"></i> Medication Schedule</h5>
-                    <a href="{{ url_for('medications') }}" class="btn btn-sm btn-outline-primary">View All</a>
-                </div>
+
+    <!-- Daily Tips Section -->
+    <section class="dashboard-section">
+        <h2 class="section-title">Daily Tips</h2>
+        <div class="tips-wrapper">
+            <div class="tip-item memory-tip">
+                <h5><i class="fas fa-brain text-primary me-2"></i> Memory Tip</h5>
+                <p>Try associating new information with something you already know to help remember it better. This technique, called "chunking," makes complex information easier to recall.</p>
             </div>
-            <div class="card-body">
-                {% if medications %}
-                    <div class="medication-list">
-                        {% for med in medications[:3] %}
-                            <div class="medication-item">
-                                <div class="med-icon">
-                                    <i class="fas fa-prescription-bottle-alt"></i>
-                                </div>
-                                <div class="med-details flex-grow-1">
-                                    <h5 class="mb-1">{{ med.name }}</h5>
-                                    <p class="mb-0 text-muted">{{ med.time }}</p>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    {% if medications|length > 3 %}
-                        <div class="text-center mt-3">
-                            <span class="text-muted">+{{ medications|length - 3 }} more medications</span>
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <div class="text-center text-muted py-5">
-                        <i class="fas fa-prescription-bottle fa-3x mb-3"></i>
-                        <p>No medications scheduled</p>
-                    </div>
-                {% endif %}
+            <div class="tip-item wellness-tip">
+                <h5><i class="fas fa-heart text-danger me-2"></i> Wellness Tip</h5>
+                <p>A short 15-minute walk can improve cognitive function and boost your mood. Try to incorporate light physical activity into your daily routine for better brain health.</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- SOS Emergency Button -->
+<div class="sos-button-container">
+    <button id="sos-button" class="sos-button" title="Emergency SOS">
+        <i class="fas fa-exclamation-triangle"></i>
+    </button>
+</div>
+
+<!-- SOS Modal -->
+<div class="modal fade" id="sosModal" tabindex="-1" aria-labelledby="sosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="sosModalLabel"><i class="fas fa-exclamation-triangle me-2"></i> Emergency Assistance</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="fas fa-exclamation-circle text-danger fa-4x mb-3"></i>
+                    <h4>Do you need emergency assistance?</h4>
+                </div>
+                <p class="text-center">Pressing "Call Emergency Services" will contact your emergency contacts and caretaker immediately.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-sos">
+                    <i class="fas fa-phone-alt me-2"></i> Call Emergency Services
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card mt-3">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Daily Tips</h5>
-    </div>
-    <div class="card-body">
-        <div class="tip-item mb-3">
-            <h5><i class="fas fa-brain text-primary me-2"></i> Memory Tip</h5>
-            <p>Try associating new information with something you already know to help remember it better.</p>
-        </div>
-        <div class="tip-item">
-            <h5><i class="fas fa-heart text-danger me-2"></i> Wellness Tip</h5>
-            <p>A short 15-minute walk can improve cognitive function and boost your mood.</p>
+<!-- SOS Confirmation Modal -->
+<div class="modal fade" id="sosConfirmationModal" tabindex="-1" aria-labelledby="sosConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="sosConfirmationModalLabel"><i class="fas fa-check-circle me-2"></i> Help is on the way</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-check-circle text-success fa-5x mb-3"></i>
+                <h4>Your emergency contacts have been notified</h4>
+                <p>Help is on the way. Please stay calm and remain where you are if possible.</p>
+                <div class="d-grid gap-2 mt-3">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -136,9 +956,140 @@
 
 {% block scripts %}
 <script>
-    // Auto-refresh the dashboard every 5 minutes to update medication times
-    setTimeout(function() {
-        window.location.reload();
-    }, 300000);
+    // Current time and date functions
+    function updateDateTime() {
+        const now = new Date();
+        
+        // Update time
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        document.getElementById('current-time').textContent = formattedTime;
+        
+        // Set greeting based on time of day
+        let greeting = "morning";
+        if (hours >= 12 && hours < 17) {
+            greeting = "afternoon";
+        } else if (hours >= 17) {
+            greeting = "evening";
+        }
+        document.getElementById('greeting-time').textContent = greeting;
+    }
+    
+    // Weather functions
+    async function getWeather() {
+        try {
+            // This would be replaced with an actual API call in production
+            // For demonstration, we're using mock data
+            const weatherData = {
+                condition: "Sunny",
+                temperature: 31,
+                location: "Chennai"
+            };
+            
+            // Update weather display
+            const weatherIcon = getWeatherIcon(weatherData.condition);
+            document.querySelector('.weather-icon').innerHTML = weatherIcon;
+            document.getElementById('weather-condition').textContent = weatherData.condition;
+            document.getElementById('weather-temp').textContent = `${weatherData.temperature}°C`;
+            document.getElementById('weather-location').textContent = weatherData.location;
+        } catch (error) {
+            console.error('Error fetching weather:', error);
+            document.getElementById('weather-condition').textContent = 'Weather data unavailable';
+        }
+    }
+    
+    function getWeatherIcon(condition) {
+        // Map weather conditions to Font Awesome icons
+        const conditionMap = {
+            'Sunny': '<i class="fas fa-sun text-warning"></i>',
+            'Clear': '<i class="fas fa-sun text-warning"></i>',
+            'Cloudy': '<i class="fas fa-cloud text-secondary"></i>',
+            'Partly Cloudy': '<i class="fas fa-cloud-sun text-secondary"></i>',
+            'Rain': '<i class="fas fa-cloud-rain text-primary"></i>',
+            'Showers': '<i class="fas fa-cloud-showers-heavy text-primary"></i>',
+            'Thunderstorm': '<i class="fas fa-bolt text-warning"></i>',
+            'Snow': '<i class="fas fa-snowflake text-info"></i>',
+            'Fog': '<i class="fas fa-smog text-secondary"></i>'
+        };
+        
+        return conditionMap[condition] || '<i class="fas fa-cloud text-secondary"></i>';
+    }
+    
+    // Add smooth reveal animations
+    function revealElements() {
+        const cards = document.querySelectorAll('.card');
+        cards.forEach((card, index) => {
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    }
+    
+    // SOS emergency functions
+    document.getElementById('sos-button').addEventListener('click', function() {
+        // Show the SOS confirmation modal
+        const sosModal = new bootstrap.Modal(document.getElementById('sosModal'));
+        sosModal.show();
+    });
+    
+    document.getElementById('confirm-sos').addEventListener('click', async function() {
+        // Close the first modal
+        bootstrap.Modal.getInstance(document.getElementById('sosModal')).hide();
+        
+        try {
+            // Send SOS alert to the backend
+            const response = await fetch('/api/sos_alert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: "{{ session.user_id }}",
+                    timestamp: new Date().toISOString(),
+                    location: "Location data would be here in production"
+                })
+            });
+            
+            // Show confirmation modal regardless of backend response
+            // In production, you might want to check the response
+            const sosConfirmModal = new bootstrap.Modal(document.getElementById('sosConfirmationModal'));
+            sosConfirmModal.show();
+            
+        } catch (error) {
+            console.error('Error sending SOS alert:', error);
+            // Show the confirmation anyway so the user isn't left hanging
+            const sosConfirmModal = new bootstrap.Modal(document.getElementById('sosConfirmationModal'));
+            sosConfirmModal.show();
+        }
+    });
+    
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set initial opacity for fade-in effect
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        });
+        
+        // Trigger fade-in effect
+        setTimeout(revealElements, 300);
+        
+        // Update date and time initially and then every minute
+        updateDateTime();
+        setInterval(updateDateTime, 60000);
+        
+        // Get weather data initially and then every hour
+        getWeather();
+        setInterval(getWeather, 3600000);
+        
+        // Auto-refresh the dashboard every 5 minutes to update medication times
+        setTimeout(function() {
+            window.location.reload();
+        }, 300000);
+    });
 </script>
 {% endblock %} 

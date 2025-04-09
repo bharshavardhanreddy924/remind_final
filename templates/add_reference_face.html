@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Reference Faces{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="fw-bold">
+            <a href="{{ url_for('dashboard') }}" class="text-decoration-none">
+                <i class="fas fa-arrow-left me-2"></i>
+            </a>
+            Manage Reference Faces
+        </h1>
+        <p class="text-muted">Add and manage reference faces for recognition</p>
+    </div>
+</div>
+
+<!-- Toast container for notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="resultToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header" id="toastHeader">
+            <strong class="me-auto" id="toastTitle">Notification</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            Operation completed.
+        </div>
+    </div>
+</div>
+
+<!-- Error and success messages -->
+{% if error_message %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-circle me-2"></i> {{ error_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+{% if success_message %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i> {{ success_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Add new reference face form -->
+    <div class="col-md-5 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i> Add New Reference Face</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_reference_face') }}" method="post" enctype="multipart/form-data" id="referenceForm">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Person's Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required placeholder="Enter full name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="relation" class="form-label">Relationship (Optional)</label>
+                        <input type="text" class="form-control" id="relation" name="relation" placeholder="e.g. Mother, Friend, Colleague">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="photo" class="form-label">Person's Photo</label>
+                        <input type="file" class="form-control" id="photo" name="photo" accept="image/*" required>
+                        <div class="form-text">Upload a clear photo showing the person's face</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div id="photoPreview" class="text-center d-none">
+                            <img id="previewImage" class="img-thumbnail mt-2" style="max-height: 200px;" alt="Photo Preview">
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" id="addFaceBtn">
+                            <i class="fas fa-plus-circle me-2"></i> Add Reference Face
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Existing reference faces -->
+    <div class="col-md-7 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i> Existing Reference Faces</h5>
+            </div>
+            <div class="card-body">
+                {% if reference_faces %}
+                    <div class="row row-cols-1 row-cols-md-2 g-4">
+                        {% for face in reference_faces %}
+                            <div class="col">
+                                <div class="card h-100">
+                                    <img src="{{ url_for('static', filename=face.image_path) }}" 
+                                         class="card-img-top" 
+                                         alt="{{ face.name }}"
+                                         style="height: 200px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ face.name }}</h5>
+                                        {% if face.relation %}
+                                            <p class="card-text text-muted">{{ face.relation }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-footer bg-transparent">
+                                        <form action="{{ url_for('delete_reference_face', face_id=face.id) }}" 
+                                              method="post"
+                                              class="delete-face-form"
+                                              data-face-name="{{ face.name }}">
+                                            <button type="submit" class="btn btn-danger w-100">
+                                                <i class="fas fa-trash-alt me-2"></i> Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No reference faces added yet</h5>
+                        <p>Add reference faces to start using face recognition</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- About Reference Faces -->
+<div class="card mt-2">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> About Reference Faces</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="fas fa-question-circle text-primary me-2"></i> What are reference faces?</h6>
+                <p>Reference faces are stored images of people that the system uses to identify individuals in uploaded photos.</p>
+                
+                <h6><i class="fas fa-camera text-primary me-2"></i> Tips for adding reference faces:</h6>
+                <ul>
+                    <li>Use clear, well-lit photos showing the person's face</li>
+                    <li>Front-facing photos work best for facial recognition</li>
+                    <li>Add multiple photos of the same person for better accuracy</li>
+                    <li>Faces should be clearly visible and not obscured</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-shield-alt text-primary me-2"></i> Privacy Information:</h6>
+                <p>All face data is stored locally on your device and is not sent to external servers.</p>
+                
+                <h6><i class="fas fa-cogs text-primary me-2"></i> How recognition works:</h6>
+                <p>The system uses facial recognition technology to:</p>
+                <ol>
+                    <li>Detect faces in uploaded photos</li>
+                    <li>Extract unique facial features</li>
+                    <li>Compare these features with stored reference faces</li>
+                    <li>Identify matches based on similarity</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Photo preview functionality
+        const photoInput = document.getElementById('photo');
+        const photoPreview = document.getElementById('photoPreview');
+        const previewImage = document.getElementById('previewImage');
+        
+        photoInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    photoPreview.classList.remove('d-none');
+                }
+                
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+        
+        // Toast functionality
+        const resultToast = new bootstrap.Toast(document.getElementById('resultToast'));
+        
+        // Handle reference face deletion with AJAX
+        document.querySelectorAll('.delete-face-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const faceName = this.getAttribute('data-face-name');
+                
+                if (confirm(`Are you sure you want to delete the reference face for ${faceName}?`)) {
+                    const formAction = this.getAttribute('action');
+                    
+                    fetch(formAction, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Show success message
+                            document.getElementById('toastHeader').className = 'toast-header bg-success text-white';
+                            document.getElementById('toastTitle').textContent = 'Success';
+                            document.getElementById('toastMessage').textContent = `Successfully deleted reference face for ${faceName}`;
+                            resultToast.show();
+                            
+                            // Reload the page to show updated list
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            // Show error message
+                            document.getElementById('toastHeader').className = 'toast-header bg-danger text-white';
+                            document.getElementById('toastTitle').textContent = 'Error';
+                            document.getElementById('toastMessage').textContent = data.error || 'An error occurred while deleting the reference face';
+                            resultToast.show();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('toastHeader').className = 'toast-header bg-danger text-white';
+                        document.getElementById('toastTitle').textContent = 'Error';
+                        document.getElementById('toastMessage').textContent = 'Failed to delete reference face. Please try again.';
+                        resultToast.show();
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endblock %} 
