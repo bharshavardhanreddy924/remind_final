@@ -4,31 +4,21 @@
  * Optimized for Android and mobile devices
  */
 
-const CACHE_NAME = 'remind-v4';
+const CACHE_NAME = 'remind-pwa-v1';
+const DYNAMIC_CACHE = 'remind-dynamic-v1';
 
 // Assets to cache on install
-const STATIC_CACHE_URLS = [
+const STATIC_ASSETS = [
   '/',
-  '/splash',
-  '/login',
-  '/register',
-  '/offline',
-  '/static/css/style.css',
+  '/static/css/main.css',
+  '/static/js/main.js',
   '/static/js/pwa-install.js',
-  '/static/js/notification_manager.js', 
-  '/static/js/voice_controller.js',
-  '/static/js/permissions_manager.js',
   '/static/manifest.json',
-  '/static/images/icons/icon-192x192.png',
-  '/static/images/icons/icon-512x512.png',
-  '/static/images/icons/apple-touch-icon.png',
-  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
-  'https://code.jquery.com/jquery-3.6.0.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-regular-400.woff2',
-  'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'
+  '/static/icons/favicon.ico',
+  '/static/icons/icon-192x192.png',
+  '/static/icons/icon-512x512.png',
+  '/static/icons/maskable_icon.png',
+  '/offline'
 ];
 
 // Dynamic content to cache as user interacts with the app
@@ -50,71 +40,42 @@ const ANDROID_CRITICAL_ASSETS = [
   '/offline'
 ];
 
-// Install event: cache static assets
+// Install event
 self.addEventListener('install', event => {
-  console.log('[Service Worker] Installing...');
-  
-  // Skip waiting to ensure the new service worker activates immediately
-  self.skipWaiting();
-  
+  console.log('[Service Worker] Installing Service Worker...', event);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('[Service Worker] Caching static assets');
-        return cache.addAll(STATIC_CACHE_URLS);
+        return cache.addAll(STATIC_ASSETS);
       })
       .then(() => {
-        // Special handling for Android - prefetch critical assets
-        if (/Android/i.test(self.navigator.userAgent)) {
-          console.log('[Service Worker] Prefetching Android-specific assets');
-          return caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(ANDROID_CRITICAL_ASSETS);
-          });
-        }
-        return Promise.resolve();
-      })
-      .catch(error => {
-        console.error('[Service Worker] Cache installation failed:', error);
+        console.log('[Service Worker] Successfully installed');
+        return self.skipWaiting();
       })
   );
 });
 
-// Activate event: clean up old caches
+// Activate event
 self.addEventListener('activate', event => {
-  console.log('[Service Worker] Activating...');
+  console.log('[Service Worker] Activating Service Worker...', event);
   
-  // Claim clients to ensure that the service worker controls all clients immediately
+  // Clean up old caches
   event.waitUntil(
-    clients.claim()
-      .then(() => {
-        // Remove old caches
-        return caches.keys().then(cacheNames => {
-          return Promise.all(
-            cacheNames.filter(cacheName => {
-              return (cacheName !== CACHE_NAME && cacheName !== DYNAMIC_CACHE_NAME);
-            }).map(cacheName => {
-              console.log('[Service Worker] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            })
-          );
-        });
-      })
-      .then(() => {
-        // Android-specific optimization: perform fetch for critical routes to warm the cache
-        if (/Android/i.test(self.navigator.userAgent)) {
-          console.log('[Service Worker] Warming cache for Android');
-          return Promise.all(
-            ANDROID_CRITICAL_ASSETS.map(url => 
-              fetch(new Request(url, { cache: 'reload' }))
-                .catch(err => console.log(`Cache warming failed for ${url}: ${err}`))
-            )
-          );
-        }
-        return Promise.resolve();
-      })
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME && cacheName !== DYNAMIC_CACHE) {
+            console.log('[Service Worker] Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => {
+      console.log('[Service Worker] Now ready to handle fetches!');
+      return self.clients.claim();
+    })
   );
-  
-  return self.clients.claim();
 });
 
 // Helper: Is this a navigation request?
@@ -163,167 +124,103 @@ function isAndroidDevice() {
   return /Android/i.test(self.navigator.userAgent);
 }
 
-// Fetch event: handle different caching strategies
+// Fetch event
 self.addEventListener('fetch', event => {
-  const requestUrl = new URL(event.request.url);
+  const request = event.request;
+  const url = new URL(request.url);
   
-  // Skip non-GET requests and browser extensions
-  if (event.request.method !== 'GET' || 
-      requestUrl.protocol === 'chrome-extension:' ||
-      requestUrl.protocol === 'chrome:' ||
-      requestUrl.hostname === 'localhost') {
+  // Skip cross-origin requests
+  if (url.origin !== location.origin) {
+    return;
+  }
+
+  // API calls - Network first, then offline fallback
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(networkFirstStrategy(request));
     return;
   }
   
-  // 1. Handle standalone mode navigation to root - redirect to splash
-  if (event.request.mode === 'navigate' && 
-      requestUrl.pathname === '/' && 
-      (requestUrl.searchParams.has('standalone') || 
-       requestUrl.searchParams.has('source'))) {
+  // HTML pages - Network first with cache fallback
+  if (request.headers.get('Accept').includes('text/html')) {
     event.respondWith(
-      fetch(new Request('/splash?standalone=true', { 
-        credentials: 'include', 
-        mode: event.request.mode,
-        headers: event.request.headers
-      }))
-    );
-    return;
-  }
-  
-  // 2. For API requests - Network First strategy
-  if (isApiRequest(requestUrl)) {
-    event.respondWith(networkFirstStrategy(event.request));
-    return;
-  }
-  
-  // 3. For HTML navigation - Network First with offline fallback
-  if (isNavigationRequest(event.request)) {
-    event.respondWith(
-      networkFirstStrategy(event.request)
+      fetch(request)
+        .then(response => {
+          // Cache the latest version
+          let clonedResponse = response.clone();
+          caches.open(DYNAMIC_CACHE).then(cache => {
+            cache.put(request, clonedResponse);
+          });
+          return response;
+        })
         .catch(() => {
-          return caches.match('/offline')
-            .then(response => {
-              return response || fetch(event.request);
+          return caches.match(request)
+            .then(cachedResponse => {
+              if (cachedResponse) {
+                return cachedResponse;
+              }
+              // If no cached version, return the offline page
+              return caches.match('/offline');
             });
         })
     );
     return;
   }
-  
-  // 4. For static assets - Cache First strategy
-  if (isStaticAsset(requestUrl)) {
-    event.respondWith(cacheFirstStrategy(event.request));
-    return;
-  }
-  
-  // 5. Default - Stale While Revalidate strategy
-  event.respondWith(staleWhileRevalidateStrategy(event.request));
+
+  // For other assets, use cache-first strategy
+  event.respondWith(cacheFirstStrategy(request));
 });
 
-// Cache First Strategy: Try cache first, fallback to network and cache the response
+// Cache-first strategy (for static assets)
 function cacheFirstStrategy(request) {
   return caches.match(request)
     .then(cachedResponse => {
       if (cachedResponse) {
-        // Return cached response and update cache in background for Android
-        if (isAndroidDevice()) {
-          updateCache(request);
-        }
         return cachedResponse;
       }
-      
-      // If not in cache, fetch from network and add to cache
-      return fetchAndCache(request);
+
+      return fetch(request)
+        .then(networkResponse => {
+          // Cache the fetched resource
+          let responseToCache = networkResponse.clone();
+          caches.open(DYNAMIC_CACHE).then(cache => {
+            cache.put(request, responseToCache);
+          });
+          return networkResponse;
+        })
+        .catch(error => {
+          console.error('[Service Worker] Fetch failed:', error);
+          // Return default offline content for images or other resources
+          if (request.url.match(/\.(jpe?g|png|gif|svg|webp)$/)) {
+            return caches.match('/static/images/offline-image.png');
+          }
+          return new Response('Network request failed');
+        });
     });
 }
 
-// Network First Strategy: Try network first, fallback to cache
+// Network-first strategy (for API calls and dynamic content)
 function networkFirstStrategy(request) {
   return fetch(request)
-    .then(networkResponse => {
-      // Clone the response before using it
-      const responseToCache = networkResponse.clone();
-      
-      // Only cache valid responses
-      if (networkResponse.ok && shouldCache(request.url)) {
-        const cacheName = request.url.includes('/api/') ? DYNAMIC_CACHE_NAME : CACHE_NAME;
-        caches.open(cacheName)
-          .then(cache => {
-            cache.put(request, responseToCache);
-          });
-      }
-      
-      return networkResponse;
+    .then(response => {
+      // Cache the latest version
+      let clonedResponse = response.clone();
+      caches.open(DYNAMIC_CACHE).then(cache => {
+        cache.put(request, clonedResponse);
+      });
+      return response;
     })
     .catch(() => {
-      // If network fails, try to get from cache
       return caches.match(request)
         .then(cachedResponse => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          
-          // If it's a navigation request and we still don't have a cached response,
-          // return the offline page for Android
-          if (isNavigationRequest(request) && isAndroidDevice()) {
-            return caches.match('/offline');
-          }
-          
-          throw new Error('No cached response available');
+          return new Response(JSON.stringify({ 
+            error: 'Network connection lost' 
+          }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
         });
-    });
-}
-
-// Stale While Revalidate: Return cached version immediately, then update cache
-function staleWhileRevalidateStrategy(request) {
-  return caches.match(request)
-    .then(cachedResponse => {
-      // Start network fetch in parallel
-      const fetchPromise = fetchAndCache(request);
-      
-      // Return the cached response immediately if we have one
-      return cachedResponse || fetchPromise;
-    });
-}
-
-// Helper: Fetch from network and cache response
-function fetchAndCache(request) {
-  return fetch(request)
-    .then(networkResponse => {
-      // Only cache valid & GET responses
-      if (networkResponse.ok && request.method === 'GET' && shouldCache(request.url)) {
-        const responseToCache = networkResponse.clone();
-        const cacheName = isApiRequest(new URL(request.url)) ? DYNAMIC_CACHE_NAME : CACHE_NAME;
-        
-        caches.open(cacheName)
-          .then(cache => {
-            cache.put(request, responseToCache);
-          })
-          .catch(err => {
-            console.error(`[Service Worker] Error caching ${request.url}:`, err);
-          });
-      }
-      
-      return networkResponse;
-    });
-}
-
-// Helper: Update cache with a fresh network response
-function updateCache(request) {
-  return fetch(request)
-    .then(networkResponse => {
-      if (networkResponse.ok && shouldCache(request.url)) {
-        const cacheName = isApiRequest(new URL(request.url)) ? DYNAMIC_CACHE_NAME : CACHE_NAME;
-        
-        return caches.open(cacheName)
-          .then(cache => {
-            return cache.put(request, networkResponse);
-          });
-      }
-      return networkResponse;
-    })
-    .catch(err => {
-      console.log('[Service Worker] Background update failed:', err);
     });
 }
 
@@ -493,6 +390,13 @@ self.addEventListener('notificationclick', event => {
       }
     })
   );
+});
+
+// Listen for messages from clients
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 console.log('[Service Worker] Script loaded and ready');

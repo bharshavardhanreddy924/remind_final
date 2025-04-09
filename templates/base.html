@@ -613,28 +613,23 @@
         </div>
     </footer>
 
-    <!-- Install PWA Button -->
-    <div id="install-container" class="d-none">
-        <button id="install-button" class="btn btn-primary">
-            <i class="fas fa-download"></i>
-            Install App
+    <!-- PWA Install Button Container -->
+    <div id="install-container" class="d-none position-fixed bottom-0 end-0 m-3" style="z-index: 1050;">
+        <button id="install-button" class="btn btn-primary shadow px-4 py-2" style="border-radius: 8px;">
+            <i class="fas fa-download me-2"></i>Install App
         </button>
     </div>
 
-    <!-- Android PWA Install Banner -->
-    <div id="android-install-banner" class="d-none position-fixed bottom-0 start-0 end-0 bg-white p-3 shadow-lg" style="z-index: 1050; border-top: 4px solid var(--primary-color);">
-        <div class="d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center">
-                <img src="{{ url_for('static', filename='images/icons/icon-96x96.png') }}" alt="ReMind App Icon" class="me-3" style="width: 48px; height: 48px;">
-                <div>
-                    <h5 class="mb-0">Install ReMind App</h5>
-                    <p class="mb-0 text-muted small">Add to home screen for better experience</p>
-                </div>
+    <!-- Android Install Banner -->
+    <div id="android-install-banner" class="d-none position-fixed bottom-0 start-0 end-0 shadow-lg" style="z-index: 1040; background-color: white; border-top: 4px solid #4361ee;">
+        <div class="d-flex align-items-center p-3">
+            <img src="/static/images/icons/icon-192x192.png" alt="App Icon" class="me-3" style="width: 48px; height: 48px; border-radius: 8px;">
+            <div class="flex-grow-1">
+                <h5 class="mb-0">ReMind App</h5>
+                <p class="mb-0 text-muted">Install for a better experience</p>
             </div>
-            <div>
-                <button id="android-install-btn" class="btn btn-primary me-2">Install</button>
-                <button id="android-install-close" class="btn btn-light">Later</button>
-            </div>
+            <button id="android-install-btn" class="btn btn-primary me-2">Install</button>
+            <button id="android-install-close" class="btn-close"></button>
         </div>
     </div>
 
@@ -886,7 +881,35 @@
         });
     </script>
 
-    {% block scripts %}{% endblock %}
+    {% block scripts %}
+    <!-- PWA Installation Script -->
+    <script src="/static/js/pwa-install.js"></script>
+
+    <script>
+        // Check if service worker is supported
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', {scope: '/'})
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+        
+        // Check if the app is in standalone mode
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+            document.body.classList.add('pwa-mode');
+            
+            // Hide browser-specific elements when in PWA mode
+            document.querySelectorAll('.browser-only').forEach(function(element) {
+                element.style.display = 'none';
+            });
+        }
+    </script>
+    {% endblock %}
 
     {% if session.get('user_id') %}
         {% include 'voice_navigation.html' %}
