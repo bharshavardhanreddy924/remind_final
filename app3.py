@@ -20,7 +20,6 @@ try:
     import pickle
     import base64
     from PIL import Image
-    import cv2
     import io
     import math
     import google_auth_oauthlib.flow
