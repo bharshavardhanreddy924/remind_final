@@ -291,10 +291,6 @@ def index():
     # Otherwise show the login page
     return render_template('login.html')
 
-from werkzeug.security import check_password_hash, generate_password_hash
-
-from werkzeug.security import check_password_hash, generate_password_hash
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -307,34 +303,18 @@ def login():
         
         user = db.users.find_one({"email": email})
         
-        if user:
-            stored_hash = user['password']
+        if user and check_password_hash(user['password'], password):
+            session.permanent = True
+            session['user_id'] = str(user['_id'])
+            session['user_type'] = user['user_type']
+            session['name'] = user['name']
             
-            # Check the password with the existing hash
-            if check_password_hash(stored_hash, password):
-                # If the password is using 'scrypt', rehash it with 'pbkdf2:sha256'
-                if stored_hash.startswith("scrypt"):
-                    new_hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-                    db.users.update_one(
-                        {"_id": user['_id']},
-                        {"$set": {"password": new_hashed_password}}
-                    )
-                
-                # Set session values and log the user in
-                session.permanent = True
-                session['user_id'] = str(user['_id'])
-                session['user_type'] = user['user_type']
-                session['name'] = user['name']
-                
-                flash('Login successful!', 'success')
-                return redirect(url_for('dashboard'))
-            else:
-                flash('Invalid email or password', 'danger')
+            flash('Login successful!', 'success')
+            return redirect(url_for('dashboard'))
         else:
             flash('Invalid email or password', 'danger')
     
     return render_template('login.html')
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -357,7 +337,7 @@ def register():
         new_user = {
             "name": name,
             "email": email,
-            "password": generate_password_hash(password, method='pbkdf2:sha256'),
+            "password": generate_password_hash(password),
             "user_type": user_type,
             "created_at": datetime.now(),
             "personal_info": "I am a person who needs memory care assistance."
