@@ -291,6 +291,8 @@ def index():
     # Otherwise show the login page
     return render_template('login.html')
 
+from werkzeug.security import check_password_hash, generate_password_hash
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -303,18 +305,33 @@ def login():
         
         user = db.users.find_one({"email": email})
         
-        if user and check_password_hash(user['password'], password):
-            session.permanent = True
-            session['user_id'] = str(user['_id'])
-            session['user_type'] = user['user_type']
-            session['name'] = user['name']
+        if user:
+            stored_hash = user['password']
             
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
+            # Check the password with the existing hash
+            if check_password_hash(stored_hash, password):
+                # If the password was hashed with scrypt, rehash it with pbkdf2:sha256
+                if stored_hash.startswith("scrypt"):
+                    new_hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+                    db.users.update_one(
+                        {"_id": user['_id']},
+                        {"$set": {"password": new_hashed_password}}
+                    )
+                
+                session.permanent = True
+                session['user_id'] = str(user['_id'])
+                session['user_type'] = user['user_type']
+                session['name'] = user['name']
+                
+                flash('Login successful!', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Invalid email or password', 'danger')
         else:
             flash('Invalid email or password', 'danger')
     
     return render_template('login.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
