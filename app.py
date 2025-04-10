@@ -319,21 +319,30 @@ def login():
                         {"$set": {"password": new_hash}}
                     )
             except ValueError:
-                # If scrypt fails, try to verify with a direct string comparison (not secure but for migration)
-                # Only use this as a fallback if your passwords are stored in plain text
-                # login_successful = (user['password'] == password)
-                
-                # Alternative: Try specific supported hashing methods
+                # If there's a ValueError (likely due to unsupported hash type),
+                # We will try a fallback approach
+                # This is a temporary solution to migrate existing users
                 try:
-                    # Extract hash parts if possible
-                    parts = user['password'].split('$')
-                    if len(parts) >= 4:
-                        salt = parts[2]
-                        # Implement custom verification for scrypt if needed
-                        # This is just a placeholder - you'll need a proper implementation
-                        # login_successful = custom_scrypt_verify(password, salt, parts[3])
-                        pass
-                except:
+                    # Create a new hash with a supported method and verify manually
+                    new_hash = generate_password_hash(password, method='pbkdf2:sha256')
+                    # For migration purposes, if the email and password match known credentials,
+                    # we can consider this a successful login and update the hash
+                    
+                    # IMPORTANT: This part should be customized based on your specific situation
+                    # For example, you might have a list of known users and passwords
+                    # or a fallback verification method
+                    
+                    # Example fallback (customize as needed):
+                    # login_successful = verify_credentials_fallback(email, password)
+                    
+                    if login_successful:
+                        # Update the hash in the database
+                        db.users.update_one(
+                            {"_id": user['_id']},
+                            {"$set": {"password": new_hash}}
+                        )
+                except Exception as e:
+                    # If all else fails, login remains unsuccessful
                     login_successful = False
         
         if login_successful:
@@ -366,7 +375,7 @@ def register():
             flash('Email already exists', 'danger')
             return redirect(url_for('register'))
         
-        # Create new user with explicit hash method
+        # Create new user with explicit hash method that's supported
         new_user = {
             "name": name,
             "email": email,
@@ -376,7 +385,67 @@ def register():
             "personal_info": "I am a person who needs memory care assistance."
         }
         
-        # Rest of the code remains the same...
+        # For patient-type users, allow caretaker assignment
+        if user_type == "user" and request.form.get('caretaker_email'):
+            caretaker = db.users.find_one({"email": request.form.get('caretaker_email'), "user_type": "caretaker"})
+            if caretaker:
+                new_user["caretaker_id"] = caretaker['_id']
+            else:
+                flash('Caretaker email not found', 'warning')
+        
+        user_id = db.users.insert_one(new_user).inserted_id
+        
+        # Initialize collections for the user
+        db.tasks.insert_one({
+            "user_id": user_id,
+            "tasks": [
+                {"text": "Take morning medication", "completed": False},
+                {"text": "Do 15 minutes of memory exercises", "completed": False},
+                {"text": "Walk for 30 minutes", "completed": False},
+                {"text": "Call family member", "completed": False},
+                {"text": "Read for 20 minutes", "completed": False}
+            ]
+        })
+        
+        db.medications.insert_one({
+            "user_id": user_id,
+            "medications": []
+        })
+        
+        db.notes.insert_one({
+            "user_id": user_id,
+            "content": "",
+            "updated_at": datetime.now()
+        })
+        
+        flash('Registration successful! Please login.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('register.html')
+
+# This helper function needs to be implemented if you're using the fallback verification
+# You can customize this based on your specific requirements
+def verify_credentials_fallback(email, password):
+    """
+    A fallback method to verify credentials when standard password verification fails.
+    This is useful during the migration from unsupported hash types.
+    
+    Args:
+        email: The user's email
+        password: The plaintext password to verify
+        
+    Returns:
+        bool: True if credentials are valid, False otherwise
+    """
+    # Implementation depends on your specific requirements
+    # For example, you might check against a backup system or known credentials
+    
+    # EXAMPLE (replace with your actual implementation):
+    # return email in known_credentials and known_credentials[email] == password
+    
+    # By default, return False to be safe
+    return False
+    
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
