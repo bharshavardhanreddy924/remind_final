@@ -293,6 +293,8 @@ def index():
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from werkzeug.security import check_password_hash, generate_password_hash
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -310,7 +312,7 @@ def login():
             
             # Check the password with the existing hash
             if check_password_hash(stored_hash, password):
-                # If the password was hashed with scrypt, rehash it with pbkdf2:sha256
+                # If the password is using 'scrypt', rehash it with 'pbkdf2:sha256'
                 if stored_hash.startswith("scrypt"):
                     new_hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
                     db.users.update_one(
@@ -318,6 +320,7 @@ def login():
                         {"$set": {"password": new_hashed_password}}
                     )
                 
+                # Set session values and log the user in
                 session.permanent = True
                 session['user_id'] = str(user['_id'])
                 session['user_type'] = user['user_type']
