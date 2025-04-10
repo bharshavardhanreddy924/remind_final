@@ -541,11 +541,7 @@
                                     <i class="fas fa-images"></i> Memory Album
                                 </a>
                             </li>
-                            <li>
-                                <a class="dropdown-item {% if request.path == url_for('') %}active{% endif %}" href="{{ url_for('') }}">
-                                    <i class="fas fa-camera"></i> Face Recognition
-                                </a>
-                            </li>
+                            
                             <li>
                                 <a class="dropdown-item" href="http://127.0.0.1:5000/" 
                                    data-bs-toggle="tooltip" data-bs-placement="left" 
@@ -647,7 +643,6 @@
     <script src="{{ url_for('static', filename='js/notification_manager.js') }}"></script>
     <script src="{{ url_for('static', filename='js/permissions_manager.js') }}"></script>
     <!-- Feature scripts -->
-    <script src="{{ url_for('static', filename='js/face_recognition.js') }}"></script>
     <script src="{{ url_for('static', filename='js/reminiscence_therapy.js') }}"></script>
 
     <!-- Initialize Service Worker and Notifications -->
