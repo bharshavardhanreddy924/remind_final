@@ -1,170 +1,25 @@
 {
-    "name": "ReMind - Memory Care Assistant",
-    "short_name": "ReMind",
-    "description": "A comprehensive memory care app for patients with memory impairments and their caregivers",
-    "start_url": "/?source=pwa&standalone=true",
-    "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#4361ee",
-    "orientation": "portrait-primary",
-    "dir": "ltr",
-    "lang": "en-US",
-    "prefer_related_applications": false,
-    "icons": [
-        {
-            "src": "/static/images/icons/icon-72x72.png",
-            "sizes": "72x72",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/static/images/icons/icon-96x96.png",
-            "sizes": "96x96",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/static/images/icons/icon-128x128.png",
-            "sizes": "128x128",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/static/images/icons/icon-144x144.png",
-            "sizes": "144x144",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/static/images/icons/icon-152x152.png",
-            "sizes": "152x152",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/static/images/icons/icon-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any maskable"
-        },
-        {
-            "src": "/static/images/icons/icon-384x384.png",
-            "sizes": "384x384",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/static/images/icons/icon-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ],
-    "screenshots": [
-        {
-            "src": "/static/images/screenshots/dashboard.png",
-            "sizes": "1080x1920",
-            "type": "image/png",
-            "platform": "narrow",
-            "label": "Dashboard"
-        },
-        {
-            "src": "/static/images/screenshots/tasks.png",
-            "sizes": "1080x1920",
-            "type": "image/png",
-            "platform": "narrow",
-            "label": "Tasks"
-        },
-        {
-            "src": "/static/images/screenshots/medications.png",
-            "sizes": "1080x1920",
-            "type": "image/png",
-            "platform": "narrow",
-            "label": "Medications"
-        },
-        {
-            "src": "/static/images/screenshots/memory-training.png",
-            "sizes": "1080x1920",
-            "type": "image/png",
-            "platform": "narrow",
-            "label": "Memory Training"
-        }
-    ],
-    "shortcuts": [
-        {
-            "name": "View Dashboard",
-            "short_name": "Dashboard",
-            "description": "Go to your personalized dashboard",
-            "url": "/user_dashboard?source=shortcut",
-            "icons": [{ "src": "/static/images/icons/dashboard-icon.png", "sizes": "192x192" }]
-        },
-        {
-            "name": "Manage Tasks",
-            "short_name": "Tasks",
-            "description": "View and manage your daily tasks",
-            "url": "/tasks?source=shortcut",
-            "icons": [{ "src": "/static/images/icons/tasks-icon.png", "sizes": "192x192" }]
-        },
-        {
-            "name": "Medication Schedule",
-            "short_name": "Meds",
-            "description": "Check your medication schedule",
-            "url": "/medications?source=shortcut",
-            "icons": [{ "src": "/static/images/icons/meds-icon.png", "sizes": "192x192" }]
-        },
-        {
-            "name": "Memory Training",
-            "short_name": "Training",
-            "description": "Start memory exercises",
-            "url": "/memory_training?source=shortcut",
-            "icons": [{ "src": "/static/images/icons/brain-icon.png", "sizes": "192x192" }]
-        }
-    ],
-    "related_applications": [],
-    "categories": [
-        "health",
-        "healthcare",
-        "medical",
-        "lifestyle"
-    ],
-    "scope": "/",
-    "serviceworker": {
-        "src": "/static/sw.js",
-        "scope": "/",
-        "use_cache": true,
-        "update_via_cache": "none"
+  "short_name": "Schedio",
+  "name": "Schedio the WebApp",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
     },
-    "display_override": ["standalone", "fullscreen", "minimal-ui"],
-    "handle_links": "preferred",
-    "edge_side_panel": {
-        "preferred_width": 400
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
     },
-    "iarc_rating_id": "",
-    "id": "remind-memory-care-app",
-    "protocol_handlers": [
-        {
-            "protocol": "web+remind",
-            "url": "/?protocol_handler=%s"
-        }
-    ],
-    "launch_handler": {
-        "client_mode": ["focus-existing", "auto"]
-    },
-    "share_target": {
-        "action": "/share-target",
-        "method": "POST",
-        "enctype": "multipart/form-data",
-        "params": {
-            "title": "title",
-            "text": "text",
-            "url": "url",
-            "files": [
-                {
-                    "name": "photos",
-                    "accept": ["image/*"]
-                }
-            ]
-        }
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
 }
-  
