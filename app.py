@@ -337,7 +337,7 @@ def register():
         new_user = {
             "name": name,
             "email": email,
-            "password": generate_password_hash(password),
+            "password": generate_password_hash(password, method='pbkdf2:sha256'),
             "user_type": user_type,
             "created_at": datetime.now(),
             "personal_info": "I am a person who needs memory care assistance."
