@@ -2,12 +2,12 @@
 class LocationTracker {
     constructor() {
         this.lastLocation = {
-            latitude: 12.8699,
-            longitude: 80.2184,
+            latitude: 12.9637,
+            longitude: 77.5060,
             accuracy: 0,
             source: 'fixed',
             timestamp: new Date().toISOString(),
-            address: 'St. Joseph College of Engineering, Chennai, Tamil Nadu, India'
+            address: 'Dr. Ambedkar Institute Of Technology, Bengaluru, Karnataka, India'
         };
         this.locationLabel = document.getElementById('location-label');
         this.initialize();
@@ -17,7 +17,7 @@ class LocationTracker {
         try {
             // Update location label with fixed location
             if (this.locationLabel) {
-                this.locationLabel.textContent = '📍 St. Joseph College of Engineering';
+                this.locationLabel.textContent = '📍 Dr. Ambedkar Institute Of Technology';
             }
             
             // Initial update

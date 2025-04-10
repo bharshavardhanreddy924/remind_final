@@ -1,11 +1,13 @@
 try:
-    from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+    from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory, g
     from werkzeug.security import generate_password_hash, check_password_hash
+    from werkzeug.utils import secure_filename
     from datetime import datetime, timedelta
-    from bson.objectid import ObjectId
     import os
     import random
     import json
+    import glob
+
     import nltk
     from nltk.tokenize import sent_tokenize
     from sklearn.feature_extraction.text import TfidfVectorizer
@@ -13,17 +15,48 @@ try:
     import numpy as np
     import re
     import certifi
-    from flask import g
-
+    import uuid
+    from functools import wraps
+    import pickle
+    import base64
+    from PIL import Image
+    import cv2
+    import io
+    import math
+    import google_auth_oauthlib.flow
+    from googleapiclient.discovery import build
+    from google.oauth2.credentials import Credentials
+    import time
+    import pytz
+    from bson.objectid import ObjectId
+    
 except ImportError as e:
     print(f"Import error: {str(e)}")
     print("Please make sure all required packages are installed by running: pip install -r requirements.txt")
     exit(1)
 
-# Initialize Flask app
+from dotenv import load_dotenv
+load_dotenv()
+import nltk
+nltk.download('punkt')
+
+# Constants and configurations
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'memorycareappsecretkey')
-app.permanent_session_lifetime = timedelta(days=7)
+app.secret_key = os.environ.get('SECRET_KEY', 'remindappsecretkey')
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Limit file uploads to 16MB
+app.config['COMPRESS_MIMETYPES'] = ['text/html', 'text/css', 'text/javascript', 'application/javascript']
+app.config['COMPRESS_LEVEL'] = 6
+app.config['COMPRESS_MIN_SIZE'] = 500
+from flask_compress import Compress
+
+# Initialize Flask-Compress
+compress = Compress(app)
+
+# Setup folders
+UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
+OLD_IMAGES_FOLDER = os.path.join(app.static_folder, 'images', 'memories')
+KNOWN_FACES_FOLDER = os.path.join(app.static_folder, 'uploads', 'known_faces')
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 
 # Set secure headers for PWA
 @app.after_request
@@ -33,7 +66,26 @@ def add_pwa_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'no-referrer-when-downgrade'
-    response.headers['Permissions-Policy'] = 'geolocation=(self), microphone=(), camera=()'
+    response.headers['Permissions-Policy'] = 'geolocation=(self), microphone=(self), camera=(self)'
+    
+    # Add Service-Worker-Allowed header for broader scope
+    if request.path.endswith('sw.js'):
+        response.headers['Service-Worker-Allowed'] = '/'
+    
+    # Add cache control headers for PWA assets
+    if request.path.startswith('/static/'):
+        if any(request.path.endswith(ext) for ext in ['.js', '.css']):
+            # Cache JavaScript and CSS for 1 day
+            response.headers['Cache-Control'] = 'public, max-age=86400'
+        elif any(request.path.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']):
+            # Cache images for 7 days
+            response.headers['Cache-Control'] = 'public, max-age=604800'
+    
+    # Ensure proper headers for manifest.json
+    if request.path.endswith('manifest.json'):
+        response.headers['Content-Type'] = 'application/manifest+json'
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+    
     return response
 
 # Offline fallback page
@@ -56,16 +108,44 @@ except Exception as e:
     db = None  # Prevent application crashes
 
 # File Upload Configuration
-UPLOAD_FOLDER = 'static/images'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+UPLOAD_FOLDER = os.path.join('static', 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 16 MB max upload size
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 
 # Ensure upload directory exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+# Ensure all required directories exist
+for directory in [UPLOAD_FOLDER, OLD_IMAGES_FOLDER, KNOWN_FACES_FOLDER]:
+    os.makedirs(directory, exist_ok=True)
+
+# Global variables to store known face encodings and names
+known_face_encodings = []
+known_face_names = []
+
+def allowed_file(filename, allowed_extensions=None):
+    """Check if file has an allowed extension"""
+    if allowed_extensions is None:
+        allowed_extensions = ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+def resize_image_if_needed(image_path, max_size=(1024, 1024), quality=85):
+    """Resize an image if it's too large"""
+    try:
+        img = Image.open(image_path)
+        
+        # Only resize if the image is larger than max_size
+        if img.width > max_size[0] or img.height > max_size[1]:
+            img.thumbnail(max_size, Image.LANCZOS)
+            img.save(image_path, optimize=True, quality=quality)
+            print(f"Resized image at {image_path}")
+        
+        return True
+    except Exception as e:
+        print(f"Error resizing image: {e}")
+        return False
 
 # Database initialization
 def init_db():
@@ -78,7 +158,7 @@ def init_db():
             # Create initial admin user if no users exist
             db.users.insert_one({
                 'name': 'Admin User',
-                'email': 'admin@memorycare.com',
+                'email': 'admin@remind.com',
                 'password': generate_password_hash('admin123'),
                 'user_type': 'caretaker',
                 'created_at': datetime.now(),
@@ -194,14 +274,19 @@ def index():
     """Main entry point which can handle standalone parameter"""
     # Check if app is running in standalone mode
     standalone = request.args.get('standalone') == 'true'
+    source = request.args.get('source')
     
     # Add standalone parameter to session if provided
-    if standalone:
+    if standalone or source == 'pwa':
         session['standalone'] = True
     
     # Check if user is logged in, if so redirect to dashboard
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
+    
+    # If it's a PWA or standalone app, redirect to splash screen
+    if session.get('standalone') or source == 'pwa' or request.args.get('homescreen') == 'true':
+        return redirect(url_for('splash'))
     
     # Otherwise show the login page
     return render_template('login.html')
@@ -522,16 +607,6 @@ def notes():
     
     return render_template('notes.html', content=content)
 
-@app.route('/ai_assistant')
-def ai_assistant():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    user_id = ObjectId(session['user_id'])
-    user = get_user_data(ObjectId(user_id))
-    
-    return render_template('ai_assistant.html', user=user)
-
 @app.route('/api/ai_response', methods=['POST'])
 def ai_response():
     if 'user_id' not in session:
@@ -549,14 +624,113 @@ def ai_response():
     if not prompt:
         return jsonify({"error": "Empty prompt"}), 400
     
-    # Initialize QA system with user's personal info
-    qa_system = PersonalInfoQA()
-    qa_system.train(user.get('personal_info', ''))
-    
-    # Generate response
-    response = qa_system.generate_response(prompt)
-    
-    return jsonify({"response": response})
+    try:
+        # Initialize Groq client
+        from groq import Groq
+        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+        
+        # Get user's personal information
+        personal_info = user.get('personal_info', '')
+        name = user.get('name', 'User')
+        
+        # Get user's task data
+        task_data = db.tasks.find_one({"user_id": user_id})
+        tasks = task_data.get('tasks', []) if task_data else []
+        
+        # Get medication data
+        med_data = db.medications.find_one({"user_id": user_id})
+        medications = med_data.get('medications', []) if med_data else []
+        
+        # Get notes
+        notes_data = db.notes.find_one({"user_id": user_id})
+        notes = notes_data.get('content', '') if notes_data else ''
+        
+        # Create context for the LLM
+        context = f"""
+        USER INFORMATION:
+        Name: {name}
+        Personal Information: {personal_info}
+        
+        TASKS:
+        {', '.join([t.get('text', '') for t in tasks])}
+        
+        MEDICATIONS:
+        {', '.join([m.get('name', '') + ' at ' + m.get('time', '') for m in medications])}
+        
+        NOTES:
+        {notes}
+        """
+        
+        # Build the prompt for the LLM
+        llm_prompt = f"""You are a compassionate AI memory assistant for Ramesh, a 65-year-old person living with moderate-stage Alzheimer's disease.  
+
+You have the following background information about Ramesh:  
+
+{context}  
+
+Ramesh is asking: "{prompt}"  
+
+Respond in a gentle, reassuring, and easy-to-understand manner. Keep sentences short and simple. Avoid overwhelming details.  
+
+If the query involves personal identity, provide the following responses:  
+{{
+    'name': 'Your name is Ramesh.',
+    'age': 'You are 65 years old.',
+    'family': 'Your family loves and cares for you very much.',
+    'home': 'You live in Bengaluru with your daughter and her family.',
+    'hobbies': 'You enjoy listening to old songs and play at family photos.',
+    'daily routine': 'You start the day with a nice meal, take a walk, and spend time with family.',
+    'friends': 'Your friends and family think about you and care for you.',
+    'doctor': 'Your doctor ensures that you are healthy and taken care of.',
+    'safety': 'You are safe, and your loved ones are here to support you.'
+}}  
+
+If Ramesh seems confused or anxious, offer comforting and calming responses, such as:  
+- "It's okay, take your time."  
+- "You are safe, and everything is alright."  
+- "Your family is here for you, and they love you."  
+- "Would you like to listen to some music? It might help you feel better."  
+- "Let's look at some old photos together. That always brings back nice memories."  
+
+Ensure responses are warm, patient, and supportive to help Ramesh feel at ease.  
+"""  
+
+        # Simple memory system to provide context
+        memory = {
+            'hometown': 'Salem, Tamil Nadu',
+            'age': 68,
+            'occupation': 'Retired teacher',
+            'family': 'You have a daughter named Priya and a son named Raj',
+            'home': 'You live in Bengaluru with your daughter and her family.',
+            'hobbies': 'You enjoy gardening, reading, and playing with your grandchildren',
+        }
+        
+        # Call Groq API
+        completion = client.chat.completions.create(
+            model="gemma2-9b-it",  # Using the same model as voice commands
+            messages=[{"role": "user", "content": llm_prompt}],
+            temperature=0.7,
+            max_tokens=500,
+            top_p=1,
+            stream=False,
+        )
+        
+        # Extract the response
+        response = completion.choices[0].message.content.strip()
+        
+        return jsonify({"response": response})
+        
+    except Exception as e:
+        print(f"Error in AI response: {str(e)}")
+        
+        # Fallback to the old method if API fails
+        qa_system = PersonalInfoQA()
+        qa_system.train(user.get('personal_info', ''))
+        response = qa_system.generate_response(prompt)
+        
+        return jsonify({"response": response})
+
+
 
 @app.route('/manage_patient/<patient_id>')
 def manage_patient(patient_id):
@@ -721,21 +895,13 @@ def update_location():
         return jsonify({"error": "Not authenticated"}), 401
     
     try:
-        data = request.get_json()
-        if not data or 'latitude' not in data or 'longitude' not in data:
-            return jsonify({"error": "Invalid location data"}), 400
-        
-        # Extract location data
-        latitude = float(data['latitude'])
-        longitude = float(data['longitude'])
-        accuracy = float(data.get('accuracy', 0))
-        source = data.get('source', 'unknown')
-        timestamp = datetime.fromisoformat(data.get('timestamp', datetime.now().isoformat()))
-        address = data.get('address', '')
-        
-        # Validate coordinates
-        if not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
-            return jsonify({"error": "Invalid coordinates"}), 400
+        # Hardcoded location for Dr. Ambedkar Institute Of Technology
+        latitude = 12.9637
+        longitude = 77.5060
+        accuracy = 0.0
+        source = "hardcoded"
+        timestamp = datetime.now()
+        address = "Dr. Ambedkar Institute Of Technology, Bengaluru, Karnataka, India"
         
         # Get existing location data
         existing_location = db.locations.find_one({"user_id": ObjectId(session['user_id'])})
@@ -795,16 +961,8 @@ def patient_location(patient_id):
             flash('Patient not found', 'danger')
             return redirect(url_for('dashboard'))
         
-        # Get patient's location data with history
+        # Get patient's location data
         location_data = db.locations.find_one({"user_id": patient_id_obj})
-        
-        # Get location history for the last 24 hours
-        if location_data:
-            current_time = datetime.now()
-            location_data["recent_history"] = [
-                loc for loc in location_data.get("location_history", [])
-                if (current_time - loc["timestamp"]).total_seconds() <= 86400  # 24 hours
-            ]
         
         return render_template('patient_location.html',
                              patient=patient,
@@ -825,30 +983,12 @@ def get_patient_location(patient_id):
         location_data = db.locations.find_one({"user_id": patient_id_obj})
         
         if location_data:
-            # Get recent location history
-            current_time = datetime.now()
-            recent_history = [
-                loc for loc in location_data.get("location_history", [])
-                if (current_time - loc["timestamp"]).total_seconds() <= 86400  # 24 hours
-            ]
-            
             return jsonify({
                 "latitude": location_data['latitude'],
                 "longitude": location_data['longitude'],
                 "accuracy": location_data.get('accuracy', 0),
-                "source": location_data.get('source', 'unknown'),
                 "address": location_data.get('address', ''),
-                "timestamp": location_data['timestamp'].isoformat(),
-                "recent_history": [
-                    {
-                        "latitude": loc["latitude"],
-                        "longitude": loc["longitude"],
-                        "accuracy": loc.get("accuracy", 0),
-                        "source": loc.get("source", "unknown"),
-                        "timestamp": loc["timestamp"].isoformat()
-                    }
-                    for loc in recent_history
-                ]
+                "timestamp": location_data['timestamp'].isoformat()
             })
         else:
             return jsonify({"error": "No location data found"}), 404
@@ -891,6 +1031,14 @@ def handle_standalone_mode():
     if request.args.get('standalone') == 'true':
         session['standalone'] = True
         g.standalone = True
+    
+    # Check user agent for Android
+    user_agent = request.headers.get('User-Agent', '').lower()
+    g.is_android = 'android' in user_agent
+    
+    # Detect if app is already installed
+    if request.headers.get('Display-Mode') == 'standalone' or request.args.get('source') == 'pwa':
+        g.is_installed_pwa = True
 
 # Add these helper functions after the existing helper functions
 def schedule_task_notification(task_text, user_id):
@@ -899,9 +1047,9 @@ def schedule_task_notification(task_text, user_id):
         # Get user's notification preferences
         user = get_user_data(ObjectId(user_id))
         if not user or not user.get('notifications_enabled', True):
-            return False
+            return
 
-        # Create notification data
+        # Schedule notification 20 minutes before the task time
         notification_data = {
             "type": "task",
             "title": "Task Reminder",
@@ -910,7 +1058,6 @@ def schedule_task_notification(task_text, user_id):
             "scheduled_time": datetime.now() + timedelta(minutes=20)
         }
         
-        # Store notification in database
         db.notifications.insert_one(notification_data)
         return True
     except Exception as e:
@@ -923,7 +1070,7 @@ def schedule_medication_notification(med_name, med_time, user_id):
         # Get user's notification preferences
         user = get_user_data(ObjectId(user_id))
         if not user or not user.get('notifications_enabled', True):
-            return False
+            return
 
         # Convert medication time to datetime
         try:
@@ -960,92 +1107,996 @@ def schedule_medication_notification(med_name, med_time, user_id):
         print(f"Error scheduling medication notification: {e}")
         return False
 
-@app.route('/api/notifications', methods=['GET'])
-def get_notifications():
+# Define folder paths
+PEOPLE_FOLDER = os.path.join('static', 'uploads', 'people')
+UPLOAD_FOLDER = os.path.join('static', 'uploads', 'uploaded')
+OLD_IMAGES_FOLDER = os.path.join('static', 'uploads', 'images_old')
+REFERENCES_FOLDER = os.path.join('static', 'uploads', 'references')
+
+# Ensure all folders exist
+os.makedirs(PEOPLE_FOLDER, exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OLD_IMAGES_FOLDER, exist_ok=True)
+os.makedirs(REFERENCES_FOLDER, exist_ok=True)
+
+# File Upload Configuration
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max file size
+
+# Ensure upload directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+
+@app.route('/upload_memory', methods=['POST'])
+def upload_memory():
+    """Upload a memory (photo) for reminiscence therapy"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = ObjectId(session['user_id'])
+    
+    if 'photo' not in request.files:
+        flash("No file part", "danger")
+        return redirect(url_for('reminiscence_therapy'))
+    
+    file = request.files['photo']
+    year = request.form.get('year', '')
+    description = request.form.get('description', '')
+    
+    if file.filename == '':
+        flash("No selected file", "danger")
+        return redirect(url_for('reminiscence_therapy'))
+    
+    if file and allowed_file(file.filename):
+        try:
+            filename = secure_filename(file.filename)
+            # Add year to filename if provided
+            if year:
+                base, ext = os.path.splitext(filename)
+                filename = f"{base}_{year}{ext}"
+            
+            file_path = os.path.join(OLD_IMAGES_FOLDER, filename)
+            file.save(file_path)
+            
+            # Resize the image if it's too large
+            resize_image_if_needed(file_path, max_size=(1600, 1200))
+            
+            # Save metadata to database
+            db.memory_entries.insert_one({
+                "user_id": user_id,
+                "filename": filename,
+                "path": os.path.relpath(file_path, 'static').replace('\\', '/'),
+                "year": year,
+                "description": description,
+                "date": datetime.now()
+            })
+            
+            flash("Memory uploaded successfully!", "success")
+        except Exception as e:
+            flash(f"Error uploading memory: {str(e)}", "danger")
+    else:
+        flash("File type not allowed. Please upload a jpg, jpeg, png, or gif file.", "danger")
+    
+    return redirect(url_for('reminiscence_therapy'))
+
+@app.route('/add_memory_entry', methods=['POST'])
+def add_memory_entry():
+    """Add a text memory entry without a photo"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = ObjectId(session['user_id'])
+    
+    title = request.form.get('title', '')
+    year = request.form.get('year', '')
+    content = request.form.get('content', '')
+    
+    if not title or not content:
+        flash("Title and content are required", "danger")
+        return redirect(url_for('reminiscence_therapy'))
+    
+    try:
+        # Save entry to database
+        db.memory_entries.insert_one({
+            "user_id": user_id,
+            "title": title,
+            "year": year,
+            "content": content,
+            "date": datetime.now()
+        })
+        
+        flash("Memory entry added successfully!", "success")
+    except Exception as e:
+        flash(f"Error adding memory entry: {str(e)}", "danger")
+    
+    return redirect(url_for('reminiscence_therapy'))
+
+@app.route('/api/push-subscription', methods=['POST'])
+def push_subscription():
     if 'user_id' not in session:
         return jsonify({"error": "Not authenticated"}), 401
     
     try:
+        subscription = request.get_json()
         user_id = ObjectId(session['user_id'])
-        current_time = datetime.now()
         
-        # Get due notifications
-        notifications = list(db.notifications.find({
-            "user_id": user_id,
-            "scheduled_time": {"$lte": current_time},
-            "sent": {"$ne": True}
-        }))
+        # Update user's push subscription
+        db.users.update_one(
+            {"_id": user_id},
+            {"$set": {"push_subscription": subscription}}
+        )
         
-        # Mark notifications as sent
-        if notifications:
-            notification_ids = [n['_id'] for n in notifications]
-            db.notifications.update_many(
-                {"_id": {"$in": notification_ids}},
-                {"$set": {"sent": True}}
-            )
-        
-        # Format notifications for response
-        formatted_notifications = [{
-            "id": str(n['_id']),
-            "type": n['type'],
-            "title": n['title'],
-            "body": n['body'],
-            "scheduled_time": n['scheduled_time'].isoformat()
-        } for n in notifications]
-        
-        return jsonify({"notifications": formatted_notifications})
-        
+        return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+@app.route('/ai_assistant')
+def ai_assistant():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = ObjectId(session['user_id'])
+    user = get_user_data(ObjectId(user_id))
+    
+    return render_template('ai_assistant.html', user=user)
 
 @app.route('/api/process_voice_command', methods=['POST'])
 def process_voice_command():
+    """
+    Process voice commands using Groq API to interpret natural language
+    and return appropriate redirect URL
+    """
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Not authenticated"}), 401
+
+    user_id = session.get('user_id')
+    user_type = session.get('user_type')
+    data = request.get_json()
+    command = data.get('command', '').strip()
+    
+    if not command:
+        return jsonify({"status": "error", "message": "Empty command"}), 400
+    
+    try:
+        # Initialize Groq client
+        from groq import Groq
+        client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+        
+        # Build available routes dictionary
+        available_routes = {
+            # Common routes for all users
+            'dashboard': 'Main dashboard/home page',
+            'logout': 'Sign out of the application',
+            'tasks': 'Manage daily tasks and to-do items',
+            'medications': 'Manage medication schedule',
+            'memory_training': 'Access memory exercises and training',
+            'notes': 'Access personal notes and reminders',
+            'ai_assistant': 'Talk with the AI virtual assistant',
+            'reminiscence_therapy': 'View memory album',
+            'fitness_analysis': 'View fitness information',
+        }
+        
+        # Add patient-specific routes for caretakers
+        patient_routes = {}
+        if user_type == 'caretaker':
+            patients = get_caretaker_patients(ObjectId(user_id))
+            for patient in patients:
+                patient_name = patient['name']
+                patient_id = str(patient['_id'])
+                patient_routes[f"manage_patient/{patient_id}"] = f"Manage patient {patient_name}"
+        
+        # Construct the prompt for Groq
+        route_descriptions = "\n".join([f"- {desc} → {route}" for route, desc in available_routes.items()])
+        patient_descriptions = ""
+        if patient_routes:
+            patient_descriptions = "\n".join([f"- {desc} → {route}" for route, desc in patient_routes.items()])
+            
+        prompt = f"""You are an assistant for a healthcare application called ReMind.
+        
+Given a voice command, determine which page/route the user wants to navigate to.
+
+Available routes:
+{route_descriptions}
+
+{"Patient-specific routes:" if patient_routes else ""}
+{patient_descriptions}
+
+For the voice command: "{command}"
+
+Return only the route name (e.g., "dashboard", "tasks", etc.) without any explanation or additional text. If uncertain, return "unknown".
+"""
+
+        # Call Groq API
+        completion = client.chat.completions.create(
+            model="gemma2-9b-it",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,  # Lower temperature for more consistent results
+            max_tokens=50,
+            top_p=1,
+            stream=False,
+        )
+        
+        # Extract the route from the response
+        route = completion.choices[0].message.content.strip()
+        
+        # Handle the response
+        if route in available_routes:
+            return jsonify({
+                "status": "success",
+                "command": command,
+                "redirect": url_for(route),
+                "message": f"Navigating to {available_routes[route]}"
+            })
+        elif route in patient_routes:
+            # For patient routes, we need to extract the patient_id
+            patient_path = route.split('/')
+            if len(patient_path) == 2:
+                return jsonify({
+                    "status": "success",
+                    "command": command,
+                    "redirect": url_for('manage_patient', patient_id=patient_path[1]),
+                    "message": f"Navigating to {patient_routes[route]}"
+                })
+        elif route == "unknown":
+            return jsonify({
+                "status": "error",
+                "command": command,
+                "message": "I'm not sure where you want to go. Please try again with a clearer command."
+            })
+        else:
+            # Try to see if it's a partial match to any route
+            for available_route in list(available_routes.keys()) + list(patient_routes.keys()):
+                if route.lower() in available_route.lower():
+                    if "manage_patient" in available_route:
+                        patient_path = available_route.split('/')
+                        return jsonify({
+                            "status": "success",
+                            "command": command,
+                            "redirect": url_for('manage_patient', patient_id=patient_path[1]),
+                            "message": f"Navigating to {patient_routes.get(available_route, 'patient management')}"
+                        })
+                    else:
+                        return jsonify({
+                            "status": "success",
+                            "command": command,
+                            "redirect": url_for(available_route),
+                            "message": f"Navigating to {available_routes.get(available_route, available_route)}"
+                        })
+            
+            return jsonify({
+                "status": "error",
+                "command": command,
+                "message": f"Command not recognized: '{command}'. Please try again."
+            })
+            
+    except Exception as e:
+        print(f"Error processing voice command: {str(e)}")
+        return jsonify({
+            "status": "error", 
+            "message": "An error occurred while processing your request. Please try again.",
+            "details": str(e)
+        })
+
+@app.route('/api/upload_photo', methods=['POST'])
+def api_upload_photo():
+    """API endpoint for uploading photos with progress tracking"""
+    if 'user_id' not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    try:
+        if 'photo' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+            
+        file = request.files['photo']
+        
+        if file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+            
+        if file and allowed_file(file.filename):
+            # Save the uploaded file with a unique name
+            filename = secure_filename(file.filename)
+            unique_filename = f"{uuid.uuid4()}_{filename}"
+            file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+            
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            file.save(file_path)
+            
+            # Resize the image if it's too large
+            resize_image_if_needed(file_path)
+            
+            # Return the file path for further processing
+            return jsonify({
+                "status": "success",
+                "filename": unique_filename,
+                "path": os.path.relpath(file_path, 'static').replace('\\', '/')
+            })
+        else:
+            return jsonify({"error": "File type not allowed"}), 400
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Add a route alias for user_dashboard
+@app.route('/user_dashboard')
+def user_dashboard():
+    """Alias for the dashboard route"""
+    return redirect(url_for('dashboard'))
+
+
+# Debug route to list all registered routes
+@app.route('/debug/routes')
+def debug_routes():
+    """List all registered routes for debugging"""
+    if app.debug:
+        routes = []
+        for rule in app.url_map.iter_rules():
+            routes.append({
+                'endpoint': rule.endpoint,
+                'methods': ','.join(rule.methods),
+                'path': str(rule)
+            })
+        return jsonify(routes)
+    return "Debug mode is not enabled", 403
+
+# Authentication helper
+def requires_auth(f):
+    """Decorator to check if user is authenticated"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+def get_old_images():
+    """Get list of old images for reminiscence therapy"""
+    image_files = []
+    for ext in ['jpg', 'jpeg', 'png', 'gif']:
+        image_files.extend(glob.glob(os.path.join(OLD_IMAGES_FOLDER, f"*.{ext}")))
+    
+    # Sort by modification time (newest first)
+    image_files.sort(key=os.path.getmtime, reverse=True)
+    
+    # Format for display in the template
+    return [os.path.relpath(img, 'static').replace('\\', '/') for img in image_files]
+
+def get_memory_prompts(num_prompts=3):
+    """Generate memory prompts based on old photos"""
+    prompts = [
+        "What was happening in this photo?",
+        "Where was this photo taken?",
+        "Who were you with in this memory?",
+        "What year do you think this was?",
+        "What feelings does this photo bring up?",
+        "What sounds or smells do you associate with this memory?",
+        "What happened just before or after this photo was taken?",
+        "What was life like during this period?",
+        "What's your favorite part of this memory?",
+        "How has this place changed since this photo was taken?",
+        "What would you tell your younger self in this photo?"
+    ]
+    
+    # Return random selection of prompts
+    return random.sample(prompts, min(num_prompts, len(prompts)))
+
+@app.route('/reminiscence_therapy')
+def reminiscence_therapy():
+    """Main page for reminiscence therapy"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    # Get old images for the slideshow
+    old_images = get_old_images()
+    
+    # Generate memory prompts
+    memory_prompts = get_memory_prompts(3)
+    
+    # Get user info
+    user_id = ObjectId(session['user_id'])
+    user = get_user_data(user_id)
+    
+    # Get memory entries from database
+    memory_entries = list(db.memory_entries.find({"user_id": user_id}).sort("date", -1))
+    
+    return render_template('reminiscence_therapy.html',
+                           old_images=old_images,
+                           memory_prompts=memory_prompts,
+                           memory_entries=memory_entries,
+                           user=user)
+
+# SOS Emergency Alerts Routes
+@app.route('/api/sos_alert', methods=['POST'])
+def sos_alert():
+    """Handle emergency SOS alerts from patients"""
     if 'user_id' not in session:
         return jsonify({"error": "Not authenticated"}), 401
     
     try:
         data = request.get_json()
-        command = data.get('command', '').lower().strip()
+        user_id = ObjectId(session['user_id'])
+        user = get_user_data(user_id)
         
-        # Define command mappings
-        command_mappings = {
-            'go to dashboard': {'redirect': url_for('dashboard'), 'message': 'Navigating to dashboard'},
-            'go to tasks': {'redirect': url_for('tasks'), 'message': 'Navigating to tasks'},
-            'go to medications': {'redirect': url_for('medications'), 'message': 'Navigating to medications'},
-            'go to memory training': {'redirect': url_for('memory_training'), 'message': 'Navigating to memory training'},
-            'go to notes': {'redirect': url_for('notes'), 'message': 'Navigating to notes'},
-            'go to ai assistant': {'redirect': url_for('ai_assistant'), 'message': 'Navigating to AI assistant'},
-            'logout': {'redirect': url_for('logout'), 'message': 'Logging out'},
-            'help': {'message': 'You can say: go to dashboard, tasks, medications, memory training, notes, or AI assistant'},
-            'what can you do': {'message': 'I can help you navigate through the app. Try saying "help" to see available commands.'}
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Get patient location if available
+        location_data = db.locations.find_one({"user_id": user_id})
+        location = "Unknown"
+        
+        if location_data:
+            location = location_data.get("address", "Unknown")
+        
+        # Create emergency alert
+        alert_data = {
+            "patient_id": user_id,
+            "patient_name": user.get("name", "Unknown"),
+            "timestamp": datetime.now(),
+            "location": data.get("location", location),
+            "status": "active",
+            "description": data.get("description", "Emergency assistance needed")
         }
         
-        # Check for exact matches first
-        if command in command_mappings:
-            return jsonify({
-                "status": "success",
-                **command_mappings[command]
-            })
+        # Store alert in database
+        alert_id = db.emergency_alerts.insert_one(alert_data).inserted_id
         
-        # Check for partial matches
-        for key, value in command_mappings.items():
-            if key in command or command in key:
-                return jsonify({
-                    "status": "success",
-                    **value
-                })
+        # Find patient's caretaker
+        caretaker_id = user.get("caretaker_id")
         
-        # If no match found
+        # Send notification to caretaker if assigned
+        if caretaker_id:
+            caretaker = get_user_data(caretaker_id)
+            if caretaker:
+                # Get caretaker's push subscription
+                push_subscription = caretaker.get("push_subscription")
+                
+                if push_subscription:
+                    # In a production app, this would send a push notification
+                    print(f"Would send push notification to caretaker {caretaker['name']}")
+                
+                # Store notification in database
+                notification_data = {
+                    "user_id": caretaker_id,
+                    "type": "emergency_alert",
+                    "title": "Emergency Alert",
+                    "body": f"{user['name']} needs emergency assistance",
+                    "data": {
+                        "alert_id": str(alert_id),
+                        "patient_id": str(user_id),
+                        "patient_name": user['name'],
+                        "location": location
+                    },
+                    "read": False,
+                    "created_at": datetime.now()
+                }
+                
+                db.notifications.insert_one(notification_data)
+        
         return jsonify({
-            "status": "error",
-            "message": "I didn't understand that command. Try saying 'help' to see available commands."
+            "status": "success",
+            "message": "Emergency alert sent successfully",
+            "alert_id": str(alert_id)
         })
         
     except Exception as e:
+        print(f"Error in SOS alert: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/sos_alerts', methods=['GET'])
+def get_sos_alerts():
+    """Get list of active emergency alerts for caretaker"""
+    if 'user_id' not in session or session.get('user_type') != 'caretaker':
+        return jsonify({"error": "Not authorized"}), 403
+    
+    try:
+        caretaker_id = ObjectId(session['user_id'])
+        
+        # Get all patients assigned to this caretaker
+        patients = get_caretaker_patients(caretaker_id)
+        patient_ids = [patient['_id'] for patient in patients]
+        
+        # Get active alerts for these patients
+        alerts = list(db.emergency_alerts.find({
+            "patient_id": {"$in": patient_ids},
+            "status": "active"
+        }).sort("timestamp", -1))
+        
+        # Format alerts for JSON response
+        formatted_alerts = []
+        for alert in alerts:
+            formatted_alerts.append({
+                "alert_id": str(alert['_id']),
+                "patient_id": str(alert['patient_id']),
+                "patient_name": alert['patient_name'],
+                "timestamp": alert['timestamp'].isoformat(),
+                "location": alert['location'],
+                "status": alert['status'],
+                "description": alert.get('description', '')
+            })
+        
         return jsonify({
-            "status": "error",
-            "message": f"Error processing command: {str(e)}"
-        }), 500
+            "status": "success",
+            "alerts": formatted_alerts,
+            "count": len(formatted_alerts)
+        })
+        
+    except Exception as e:
+        print(f"Error getting SOS alerts: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/sos_alert/<alert_id>/respond', methods=['POST'])
+def respond_to_alert(alert_id):
+    """Mark an emergency alert as responded"""
+    if 'user_id' not in session or session.get('user_type') != 'caretaker':
+        return jsonify({"error": "Not authorized"}), 403
+    
+    try:
+        caretaker_id = ObjectId(session['user_id'])
+        
+        # Update alert status
+        result = db.emergency_alerts.update_one(
+            {"_id": ObjectId(alert_id), "status": "active"},
+            {"$set": {
+                "status": "responded",
+                "responded_by": caretaker_id,
+                "responded_at": datetime.now()
+            }}
+        )
+        
+        if result.modified_count == 0:
+            return jsonify({"error": "Alert not found or already responded"}), 404
+        
+        return jsonify({
+            "status": "success",
+            "message": "Alert marked as responded"
+        })
+        
+    except Exception as e:
+        print(f"Error responding to alert: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/sos_alert/<alert_id>/resolve', methods=['POST'])
+def resolve_alert(alert_id):
+    """Mark an emergency alert as resolved"""
+    if 'user_id' not in session or session.get('user_type') != 'caretaker':
+        return jsonify({"error": "Not authorized"}), 403
+    
+    try:
+        caretaker_id = ObjectId(session['user_id'])
+        
+        # Update alert status
+        result = db.emergency_alerts.update_one(
+            {"_id": ObjectId(alert_id)},
+            {"$set": {
+                "status": "resolved",
+                "resolved_by": caretaker_id,
+                "resolved_at": datetime.now(),
+                "resolution_notes": request.json.get("notes", "")
+            }}
+        )
+        
+        if result.modified_count == 0:
+            return jsonify({"error": "Alert not found"}), 404
+        
+        return jsonify({
+            "status": "success",
+            "message": "Alert resolved successfully"
+        })
+        
+    except Exception as e:
+        print(f"Error resolving alert: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# Google Fit Integration
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+
+# Google OAuth Configuration
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # For development only
+CLIENT_SECRETS_FILE = "client_secret.json"
+SCOPES = [
+    "https://www.googleapis.com/auth/fitness.activity.read",
+    "https://www.googleapis.com/auth/fitness.body.read",
+    "https://www.googleapis.com/auth/fitness.heart_rate.read",
+    "https://www.googleapis.com/auth/fitness.sleep.read",
+]
+REDIRECT_URI = "http://localhost:5000/callback"
+
+def get_last_7_days():
+    """Generate list of last 7 days dates."""
+    return [(datetime.now().date() - timedelta(days=i)) for i in range(6, -1, -1)]
+
+def get_sample_steps():
+    """Generate sample step data."""
+    dates = get_last_7_days()
+    return {
+        'dates': [d.strftime('%Y-%m-%d') for d in dates],
+        'steps': [5000, 6200, 4800, 7500, 5600, 6100, 5300]
+    }
+
+def get_sample_heart_rate():
+    """Generate sample heart rate data."""
+    dates = get_last_7_days()
+    timestamps = [datetime.combine(d, datetime.min.time().replace(hour=12, minute=0)).isoformat() for d in dates]
+    return {
+        'timestamps': timestamps,
+        'values': [72.5, 75.2, 70.8, 73.6, 71.9, 74.3, 69.5]
+    }
+
+def get_sample_sleep():
+    """Generate sample sleep data."""
+    dates = get_last_7_days()
+    return {
+        'dates': [d.strftime('%Y-%m-%d') for d in dates],
+        'Awake': [30, 25, 20, 35, 40, 30, 25],
+        'Light': [240, 260, 220, 250, 230, 270, 280],
+        'Deep': [90, 100, 110, 80, 95, 85, 105],
+        'REM': [60, 65, 70, 55, 75, 65, 60]
+    }
+
+def get_sample_calories():
+    """Return sample calories data"""
+    dates = get_last_7_days()
+    return {
+        'dates': [d.strftime('%Y-%m-%d') for d in dates],
+        'calories': [2100.5, 2300.2, 1950.7, 2400.1, 2200.3, 2150.6, 2050.4]
+    }
+
+def credentials_to_dict(credentials):
+    """Convert credentials to dictionary for session storage."""
+    return {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
+
+@app.route("/fitness")
+def fitness_home():
+    """Google Fit Integration home page."""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return render_template("fitness_index.html")
+
+@app.route("/fitness/login")
+def fitness_login():
+    """Initiate Google OAuth flow."""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        flow = Flow.from_client_secrets_file(
+            CLIENT_SECRETS_FILE, scopes=SCOPES, redirect_uri=REDIRECT_URI
+        )
+        auth_url, _ = flow.authorization_url(prompt="consent")
+        session['oauth_state'] = flow._state
+        return redirect(auth_url)
+    except Exception as e:
+        flash(f"Error initiating Google login: {str(e)}", "danger")
+        return redirect(url_for('fitness_home'))
+
+@app.route("/callback")
+def oauth_callback():
+    """Handle OAuth callback from Google."""
+    if 'user_id' not in session or 'oauth_state' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        flow = Flow.from_client_secrets_file(
+            CLIENT_SECRETS_FILE, scopes=SCOPES, redirect_uri=REDIRECT_URI,
+            state=session['oauth_state']
+        )
+        flow.fetch_token(authorization_response=request.url)
+        credentials = flow.credentials
+        session["fitness_credentials"] = credentials_to_dict(credentials)
+        return redirect(url_for('fitness_dashboard'))
+    except Exception as e:
+        flash(f"Error completing Google authentication: {str(e)}", "danger")
+        return redirect(url_for('fitness_home'))
+
+@app.route('/fitness/dashboard')
+def fitness_dashboard():
+    # Use sample data if not authenticated or if there's an error
+    try:
+        if 'fitness_credentials' not in session:
+            # Use sample data if not authenticated
+            steps_data = get_sample_steps()
+            heart_rate_data = get_sample_heart_rate()
+            sleep_data = get_sample_sleep()
+            calories_data = get_sample_calories()
+            
+            # Format data for the template
+            steps_list = []
+            for i, date in enumerate(steps_data['dates']):
+                steps_list.append({
+                    'date': date,
+                    'count': steps_data['steps'][i]
+                })
+                
+            heart_rate_list = []
+            for i, timestamp in enumerate(heart_rate_data['timestamps']):
+                heart_rate_list.append({
+                    'timestamp': timestamp,
+                    'rate': heart_rate_data['values'][i]
+                })
+                
+            sleep_list = []
+            for i, date in enumerate(sleep_data['dates']):
+                sleep_list.append({
+                    'date': date,
+                    'deep': sleep_data['Deep'][i],
+                    'rem': sleep_data['REM'][i],
+                    'light': sleep_data['Light'][i],
+                    'total': sleep_data['Light'][i] + sleep_data['Deep'][i] + sleep_data['REM'][i]
+                })
+                
+            calories_list = []
+            for i, date in enumerate(calories_data['dates']):
+                calories_list.append({
+                    'date': date,
+                    'calories': calories_data['calories'][i]
+                })
+            
+            # Get summary metrics for display
+            daily_steps = steps_data['steps'][-1]
+            avg_heart_rate = sum(heart_rate_data['values']) // len(heart_rate_data['values'])
+            sleep_duration = (sleep_data['Light'][-1] + sleep_data['Deep'][-1] + sleep_data['REM'][-1]) // 60  # Convert to hours
+            daily_calories = int(calories_data['calories'][-1])
+            
+            return render_template('fitness_dashboard.html',
+                                   steps_data=json.dumps(steps_list),
+                                   heart_rate_data=json.dumps(heart_rate_list),
+                                   sleep_data=json.dumps(sleep_list),
+                                   calories_data=json.dumps(calories_list),
+                                   daily_steps=daily_steps,
+                                   avg_heart_rate=avg_heart_rate,
+                                   sleep_duration=sleep_duration,
+                                   daily_calories=daily_calories,
+                                   sample_data=True)
+        else:
+            # This would be where we fetch real data from Google Fit API
+            # For now, we'll use sample data and pretend it's from the API
+            steps_data = get_sample_steps()
+            heart_rate_data = get_sample_heart_rate()
+            sleep_data = get_sample_sleep()
+            calories_data = get_sample_calories()
+            
+            # Format data for the template
+            steps_list = []
+            for i, date in enumerate(steps_data['dates']):
+                steps_list.append({
+                    'date': date,
+                    'count': steps_data['steps'][i]
+                })
+                
+            heart_rate_list = []
+            for i, timestamp in enumerate(heart_rate_data['timestamps']):
+                heart_rate_list.append({
+                    'timestamp': timestamp,
+                    'rate': heart_rate_data['values'][i]
+                })
+                
+            sleep_list = []
+            for i, date in enumerate(sleep_data['dates']):
+                sleep_list.append({
+                    'date': date,
+                    'deep': sleep_data['Deep'][i],
+                    'rem': sleep_data['REM'][i],
+                    'light': sleep_data['Light'][i],
+                    'total': sleep_data['Light'][i] + sleep_data['Deep'][i] + sleep_data['REM'][i]
+                })
+                
+            calories_list = []
+            for i, date in enumerate(calories_data['dates']):
+                calories_list.append({
+                    'date': date,
+                    'calories': calories_data['calories'][i]
+                })
+            
+            # Get summary metrics for display
+            daily_steps = steps_data['steps'][-1]
+            avg_heart_rate = sum(heart_rate_data['values']) // len(heart_rate_data['values'])
+            sleep_duration = (sleep_data['Light'][-1] + sleep_data['Deep'][-1] + sleep_data['REM'][-1]) // 60  # Convert to hours
+            daily_calories = int(calories_data['calories'][-1])
+            
+            return render_template('fitness_dashboard.html',
+                                   steps_data=json.dumps(steps_list),
+                                   heart_rate_data=json.dumps(heart_rate_list),
+                                   sleep_data=json.dumps(sleep_list),
+                                   calories_data=json.dumps(calories_list),
+                                   daily_steps=daily_steps,
+                                   avg_heart_rate=avg_heart_rate,
+                                   sleep_duration=sleep_duration,
+                                   daily_calories=daily_calories,
+                                   sample_data=False)
+    except Exception as e:
+        print(f"Error retrieving fitness data: {e}")
+        # Fallback to sample data in case of error
+        steps_data = get_sample_steps()
+        heart_rate_data = get_sample_heart_rate()
+        sleep_data = get_sample_sleep()
+        calories_data = get_sample_calories()
+        
+        # Format data for the template
+        steps_list = []
+        for i, date in enumerate(steps_data['dates']):
+            steps_list.append({
+                'date': date,
+                'count': steps_data['steps'][i]
+            })
+            
+        heart_rate_list = []
+        for i, timestamp in enumerate(heart_rate_data['timestamps']):
+            heart_rate_list.append({
+                'timestamp': timestamp,
+                'rate': heart_rate_data['values'][i]
+            })
+            
+        sleep_list = []
+        for i, date in enumerate(sleep_data['dates']):
+            sleep_list.append({
+                'date': date,
+                'deep': sleep_data['Deep'][i],
+                'rem': sleep_data['REM'][i],
+                'light': sleep_data['Light'][i],
+                'total': sleep_data['Light'][i] + sleep_data['Deep'][i] + sleep_data['REM'][i]
+            })
+            
+        calories_list = []
+        for i, date in enumerate(calories_data['dates']):
+            calories_list.append({
+                'date': date,
+                'calories': calories_data['calories'][i]
+            })
+        
+        # Get summary metrics for display
+        daily_steps = steps_data['steps'][-1]
+        avg_heart_rate = sum(heart_rate_data['values']) // len(heart_rate_data['values'])
+        sleep_duration = (sleep_data['Light'][-1] + sleep_data['Deep'][-1] + sleep_data['REM'][-1]) // 60  # Convert to hours
+        daily_calories = int(calories_data['calories'][-1])
+        
+        return render_template('fitness_dashboard.html',
+                               steps_data=json.dumps(steps_list),
+                               heart_rate_data=json.dumps(heart_rate_list),
+                               sleep_data=json.dumps(sleep_list),
+                               calories_data=json.dumps(calories_list),
+                               daily_steps=daily_steps,
+                               avg_heart_rate=avg_heart_rate,
+                               sleep_duration=sleep_duration,
+                               daily_calories=daily_calories,
+                               sample_data=True,
+                               error="Could not retrieve data from Google Fit")
+
+# Get sample heart rate data for testing
+def get_sample_heart_rate():
+    # Timestamps for the last 7 days
+    timestamps = []
+    heart_rates = []
+    dates = get_last_7_days()
+    
+    for day in dates:
+        # Add 4 entries per day at different times
+        for hour in [8, 12, 16, 20]:
+            timestamp = datetime.combine(day, datetime.min.time()) + timedelta(hours=hour)
+            # Convert to milliseconds
+            timestamp_ms = int(timestamp.timestamp() * 1000)
+            timestamps.append(timestamp_ms)
+            # Random heart rate between 60 and 100
+            heart_rates.append(random.randint(60, 100))
+    
+    return list(zip(timestamps, heart_rates))
+
+# Fitness Analysis Route
+@app.route('/fitness_analysis')
+def fitness_analysis():
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    # Get the fitness data for display
+    sample_steps = get_sample_steps()
+    sample_heart_rate = get_sample_heart_rate()
+    sample_sleep = get_sample_sleep()
+    sample_calories = get_sample_calories()
+    
+    return render_template('fitness_analysis.html', 
+                           steps_data=sample_steps,
+                           heart_rate_data=sample_heart_rate,
+                           sleep_data=sample_sleep,
+                           calories_data=sample_calories)
+
+# Face recognition functions
+PEOPLE_FOLDER = os.path.join('static', 'uploads', 'people')
+# Ensure people folder exists
+os.makedirs(PEOPLE_FOLDER, exist_ok=True)
+
+@app.route('/pwa-install')
+def pwa_install():
+    """Show PWA installation instructions page"""
+    # Detect device type for platform-specific instructions
+    user_agent = request.headers.get('User-Agent', '').lower()
+    
+    is_android = 'android' in user_agent
+    is_ios = 'iphone' in user_agent or 'ipad' in user_agent
+    
+    return render_template(
+        'pwa_install.html', 
+        is_android=is_android, 
+        is_ios=is_ios
+    )
+
+@app.route('/share-target', methods=['POST'])
+def share_target():
+    """Handle Web Share Target API requests"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    share_data = {
+        'title': request.form.get('title', ''),
+        'text': request.form.get('text', ''),
+        'url': request.form.get('url', '')
+    }
+    
+    # Handle shared files/photos if any
+    shared_files = []
+    if 'photos' in request.files:
+        photos = request.files.getlist('photos')
+        for photo in photos:
+            if photo and allowed_file(photo.filename):
+                # Save the file
+                filename = secure_filename(photo.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                photo.save(file_path)
+                shared_files.append(file_path)
+    
+    # Store shared data in session to use on the next page
+    session['shared_data'] = {
+        'text': share_data['text'],
+        'title': share_data['title'],
+        'url': share_data['url'],
+        'files': shared_files
+    }
+    
+    # Redirect to appropriate page based on content type
+    if shared_files:
+        return redirect(url_for('reminiscence_therapy'))
+    else:
+        return redirect(url_for('notes'))
+
+@app.route('/api/pwa-status', methods=['GET'])
+def pwa_status():
+    """API endpoint to check if running as an installed PWA"""
+    is_standalone = (
+        request.headers.get('Display-Mode') == 'standalone' or
+        request.args.get('source') == 'pwa' or
+        session.get('standalone') == True
+    )
+    
+    user_agent = request.headers.get('User-Agent', '').lower()
+    is_android = 'android' in user_agent
+    is_ios = 'iphone' in user_agent or 'ipad' in user_agent
+    
+    return jsonify({
+        'isStandalone': is_standalone,
+        'isAndroid': is_android,
+        'isIOS': is_ios,
+        'isInstallable': is_android or (is_ios and not is_standalone)
+    })
+
+@app.route('/sw.js')
+def service_worker():
+    """Serve the service worker with appropriate headers"""
+    response = send_from_directory(app.static_folder, 'sw.js')
+    # Set the correct MIME type
+    response.headers['Content-Type'] = 'application/javascript'
+    # Set Cache-Control header to no-cache to ensure fresh service worker
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    # Set Service-Worker-Allowed header for broader scope
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)

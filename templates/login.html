@@ -26,15 +26,15 @@
     <style>
         :root {
             /* Color palette */
-            --primary-color: #4361ee;
+            --primary-color: #3050e0; /* Darker blue for better contrast */
             --primary-light: #4895ef;
-            --primary-dark: #3a0ca3;
+            --primary-dark: #2a3eb1;
             --secondary-color: #4cc9f0;
             --secondary-dark: #4895ef;
-            --success-color: #4dccbd;
+            --success-color: #0a9b88;
             --danger-color: #e63946;
             --light-color: #f8f9fc;
-            --dark-color: #43425d;
+            --dark-color: #2d2c44;
             --gray-100: #f8f9fa;
             --gray-200: #e9ecef;
             --gray-300: #dee2e6;
@@ -66,11 +66,12 @@
             line-height: 1.6;
             overflow-x: hidden;
             padding: 2rem 1rem;
+            font-size: 1.1rem; /* Larger base font for seniors */
         }
         
         .login-container {
             width: 100%;
-            max-width: 420px;
+            max-width: 450px; /* Slightly larger for better readability */
             margin: 0 auto;
             position: relative;
             z-index: 1;
@@ -82,7 +83,7 @@
         }
         
         .brand-icon {
-            font-size: 3rem;
+            font-size: 3.5rem; /* Larger icon */
             margin-bottom: 1rem;
             display: inline-block;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
@@ -93,7 +94,7 @@
         }
         
         .brand-name {
-            font-size: 2.25rem;
+            font-size: 2.5rem; /* Larger brand name */
             font-weight: 700;
             margin-bottom: 0.5rem;
             color: var(--dark-color);
@@ -101,13 +102,14 @@
         }
         
         .brand-tagline {
-            font-size: 1.1rem;
+            font-size: 1.2rem; /* Larger tagline */
             color: var(--gray-700);
             margin-bottom: 0;
+            font-weight: 500; /* Slightly bolder for readability */
         }
         
         .login-card {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95); /* More opaque for better readability */
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border-radius: var(--card-border-radius);
@@ -123,7 +125,7 @@
         }
         
         .login-card h2 {
-            font-size: 1.75rem;
+            font-size: 1.85rem; /* Larger heading */
             font-weight: 700;
             margin-bottom: 2rem;
             color: var(--dark-color);
@@ -131,16 +133,16 @@
         }
         
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.8rem; /* More space between form fields */
             position: relative;
         }
         
         .form-control {
-            height: 54px;
+            height: 58px; /* Taller input fields */
             border-radius: var(--input-border-radius);
             padding: 0.75rem 1rem 0.75rem 3rem;
             border: 1px solid var(--gray-300);
-            font-size: 1rem;
+            font-size: 1.1rem; /* Larger text in input fields */
             font-weight: 500;
             transition: var(--transition);
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
@@ -157,7 +159,7 @@
             top: 50%;
             transform: translateY(-50%);
             color: var(--primary-color);
-            font-size: 1.25rem;
+            font-size: 1.4rem; /* Larger icon */
             opacity: 0.75;
             transition: var(--transition);
         }
@@ -168,13 +170,13 @@
         }
         
         .btn-login {
-            height: 54px;
+            height: 58px; /* Taller button */
             border-radius: var(--btn-border-radius);
             padding: 0.75rem 1.5rem;
             background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
             color: white;
             font-weight: 600;
-            font-size: 1.05rem;
+            font-size: 1.15rem; /* Larger text in button */
             letter-spacing: 0.5px;
             border: none;
             box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
@@ -184,483 +186,155 @@
             width: 100%;
         }
         
-        .btn-login::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
+        .btn-login:hover, .btn-login:active, .btn-login:focus {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+            box-shadow: 0 7px 20px rgba(67, 97, 238, 0.4);
+            transform: translateY(-2px);
+            color: white;
         }
         
-        .btn-login:hover::before {
-            width: 100%;
-        }
-        
-        .btn-login:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
-        }
-        
-        .forgot-password {
-            display: block;
-            text-align: right;
-            margin-bottom: 1.5rem;
-            color: var(--primary-color);
-            font-weight: 500;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: var(--transition);
-        }
-        
-        .forgot-password:hover {
-            color: var(--primary-dark);
-            text-decoration: underline;
-        }
-        
-        .register-link {
-            display: block;
+        .login-footer {
             text-align: center;
             margin-top: 2rem;
-            color: var(--gray-700);
-            font-weight: 500;
+            font-size: 1.1rem; /* Larger text */
         }
         
-        .register-link a {
+        .login-footer a {
             color: var(--primary-color);
             text-decoration: none;
             font-weight: 600;
             transition: var(--transition);
+            display: inline-block; /* Makes the link a block for easier tapping */
+            padding: 0.5rem 0.75rem; /* Larger touch target */
+            margin: -0.5rem -0.75rem; /* Negative margin to offset padding */
         }
         
-        .register-link a:hover {
+        .login-footer a:hover {
             color: var(--primary-dark);
             text-decoration: underline;
         }
         
-        .social-login {
-            margin-top: 2rem;
-            text-align: center;
+        /* New styles for Android specific optimizations */
+        .form-check {
+            margin-top: 1.5rem; /* More space above checkboxes */
         }
         
-        .social-login p {
-            position: relative;
-            margin-bottom: 1.5rem;
-            color: var(--gray-700);
+        .form-check-input {
+            width: 1.3rem; /* Larger checkbox */
+            height: 1.3rem; /* Larger checkbox */
+            margin-right: 0.5rem;
         }
         
-        .social-login p::before,
-        .social-login p::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 35%;
-            height: 1px;
-            background: var(--gray-300);
+        .form-check-label {
+            font-size: 1.1rem; /* Larger text */
+            font-weight: 500;
+            padding: 0.25rem 0; /* Creates larger touch target */
         }
         
-        .social-login p::before {
-            left: 0;
+        /* Styles for flash messages */
+        .flash-messages {
+            margin-bottom: 2rem;
         }
         
-        .social-login p::after {
-            right: 0;
+        .alert {
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
         }
         
-        .social-btn {
-            width: 46px;
-            height: 46px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 0.5rem;
-            background: white;
-            color: var(--dark-color);
-            font-size: 1.25rem;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: var(--transition);
-            border: none;
-        }
-        
-        .social-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-        }
-        
-        .social-btn-google {
-            color: #DB4437;
-        }
-        
-        .social-btn-facebook {
-            color: #4267B2;
-        }
-        
-        .social-btn-apple {
-            color: #000000;
-        }
-        
-        .bg-shapes {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            pointer-events: none;
-            overflow: hidden;
-        }
-        
-        .shape {
-            position: absolute;
-            border-radius: 50%;
-            background: linear-gradient(45deg, rgba(67, 97, 238, 0.2), rgba(76, 201, 240, 0.2));
-            animation: float 10s infinite alternate ease-in-out;
-        }
-        
-        .shape-1 {
-            top: 10%;
-            left: 10%;
-            width: 300px;
-            height: 300px;
-            animation-delay: 0s;
-        }
-        
-        .shape-2 {
-            bottom: 10%;
-            right: 10%;
-            width: 400px;
-            height: 400px;
-            animation-delay: 3s;
-        }
-        
-        .shape-3 {
-            top: 50%;
-            right: 20%;
-            width: 200px;
-            height: 200px;
-            animation-delay: 1.5s;
-        }
-        
-        .shape-4 {
-            bottom: 30%;
-            left: 5%;
-            width: 250px;
-            height: 250px;
-            animation-delay: 2.5s;
-        }
-        
-        @keyframes float {
-            0% {
-                transform: translate(0, 0) rotate(0deg) scale(1);
-            }
-            100% {
-                transform: translate(30px, 30px) rotate(15deg) scale(1.1);
-            }
-        }
-        
+        /* Mobile specific optimizations */
         @media (max-width: 576px) {
-            .login-card {
-                padding: 2rem;
+            body {
+                padding: 1.5rem 1rem;
             }
             
-            .brand-icon {
-                font-size: 2.5rem;
+            .login-card {
+                padding: 2rem 1.5rem;
             }
             
             .brand-name {
-                font-size: 2rem;
+                font-size: 2.25rem;
             }
             
-            .brand-tagline {
-                font-size: 1rem;
+            .brand-icon {
+                font-size: 3rem;
             }
-        }
-        
-        /* Alert styles */
-        .alert {
-            border: none;
-            border-radius: var(--card-border-radius);
-            padding: 1rem 1.5rem;
-            margin-bottom: 2rem;
-            font-weight: 500;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            animation: slideDown 0.4s ease forwards;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
+            
+            .login-card h2 {
+                font-size: 1.75rem;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            
+            /* Ensure tap targets are large enough */
+            .form-control, .btn-login {
+                height: 56px; /* Still tall enough */
             }
-        }
-        
-        /* Install PWA button styles - added for Android focus */
-        #install-container {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            background: white;
-            padding: 15px 25px;
-            border-radius: 50px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-            display: none;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            max-width: 90%;
-            width: 330px;
-        }
-
-        #install-container.show {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        #install-message {
-            margin-right: 10px;
-            font-weight: 500;
-            font-size: 0.9rem;
-            color: var(--dark-color);
-        }
-        
-        #install-button {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
-            white-space: nowrap;
-        }
-
-        #install-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
-        }
-
-        #install-button i {
-            font-size: 1.2em;
-        }
-        
-        .close-install {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: transparent;
-            border: none;
-            color: var(--gray-600);
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        
-        @keyframes float {
-            0% { transform: translateX(-50%) translateY(0px); }
-            50% { transform: translateX(-50%) translateY(-10px); }
-            100% { transform: translateX(-50%) translateY(0px); }
+            
+            /* Add extra space at the bottom for Android keyboard */
+            .login-container {
+                margin-bottom: 3rem;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="bg-shapes">
-        <div class="shape shape-1"></div>
-        <div class="shape shape-2"></div>
-        <div class="shape shape-3"></div>
-        <div class="shape shape-4"></div>
-    </div>
-    
-    <div class="container">
-        <div class="login-container">
-            <div class="brand">
-                <i class="fas fa-brain brand-icon"></i>
-                <h1 class="brand-name">ReMind</h1>
-                <p class="brand-tagline">Memory care for better living</p>
-            </div>
+    <div class="login-container">
+        <div class="brand">
+            <i class="fas fa-brain brand-icon"></i>
+            <h1 class="brand-name">ReMind</h1>
+            <p class="brand-tagline">Memory Care Assistant</p>
+        </div>
+        
+        <div class="login-card">
+            <h2>Sign In</h2>
             
+            <!-- Flash Messages -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
             {% endwith %}
             
-            <div class="login-card">
-                <h2>Sign In</h2>
-                <form action="{{ url_for('login') }}" method="post">
-                    <div class="form-group">
-                        <input type="email" name="email" id="email" class="form-control" placeholder="Email Address" required>
-                        <i class="fas fa-envelope form-icon"></i>
-                    </div>
-                    
-                    <div class="form-group">
-                        <input type="password" name="password" id="password" class="form-control" placeholder="Password" required>
-                        <i class="fas fa-lock form-icon"></i>
-                    </div>
-                    
-                    <a href="#" class="forgot-password">Forgot Password?</a>
-                    
-                    <button type="submit" class="btn btn-login">Sign In</button>
-                    
-                    <div class="social-login">
-                        <p>Or sign in with</p>
-                        <div>
-                            <button type="button" class="social-btn social-btn-google">
-                                <i class="fab fa-google"></i>
-                            </button>
-                            <button type="button" class="social-btn social-btn-facebook">
-                                <i class="fab fa-facebook-f"></i>
-                            </button>
-                            <button type="button" class="social-btn social-btn-apple">
-                                <i class="fab fa-apple"></i>
-                            </button>
-                        </div>
-                    </div>
-                </form>
-                
-                <div class="register-link">
-                    Don't have an account? <a href="{{ url_for('register') }}">Sign Up</a>
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <input type="email" class="form-control" id="email" name="email" placeholder="Email Address" required>
+                    <i class="fas fa-envelope form-icon"></i>
                 </div>
+                
+                <div class="form-group">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                    <i class="fas fa-lock form-icon"></i>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                    <label class="form-check-label" for="remember">
+                        Remember me
+                    </label>
+                </div>
+                
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-login">
+                        <i class="fas fa-sign-in-alt me-2"></i> Sign In
+                    </button>
+                </div>
+            </form>
+            
+            <div class="login-footer">
+                <p>Don't have an account? <a href="{{ url_for('register') }}">Register</a></p>
             </div>
         </div>
     </div>
     
-    <!-- Install PWA Button -->
-    <div id="install-container">
-        <div id="install-message">Get the ReMind app on your device!</div>
-        <button id="install-button" class="btn">
-            <i class="fas fa-download"></i>
-            Install App
-        </button>
-        <button class="close-install" aria-label="Close">&times;</button>
-    </div>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Apply animations to form elements
-            const formElements = document.querySelectorAll('.form-group, .btn-login, .forgot-password, .social-login');
-            
-            formElements.forEach((element, index) => {
-                element.style.opacity = '0';
-                element.style.transform = 'translateY(20px)';
-                element.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                
-                setTimeout(() => {
-                    element.style.opacity = '1';
-                    element.style.transform = 'translateY(0)';
-                }, 100 + (index * 100));
-            });
-            
-            // Android-specific PWA installation
-            let deferredPrompt;
-            const installContainer = document.getElementById('install-container');
-            const installButton = document.getElementById('install-button');
-            const closeInstallBtn = document.querySelector('.close-install');
-            
-            // Is Android device check
-            const isAndroid = /Android/i.test(navigator.userAgent);
-            
-            // Check if app is already installed
-            const isAppInstalled = window.matchMedia('(display-mode: standalone)').matches || 
-                                  window.navigator.standalone || 
-                                  document.referrer.includes('android-app://');
-                                  
-            if (isAppInstalled) {
-                // Already installed, don't show install button
-                document.body.classList.add('pwa-standalone');
-            } else {
-                // Wait for beforeinstallprompt event
-                window.addEventListener('beforeinstallprompt', (e) => {
-                    // Prevent the default browser install prompt
-                    e.preventDefault();
-                    
-                    // Store the event for later use
-                    deferredPrompt = e;
-                    
-                    // Show install popup (specially emphasized for Android)
-                    if (isAndroid) {
-                        setTimeout(() => {
-                            installContainer.classList.add('show');
-                        }, 2000); // Show after 2 seconds on Android
-                    } else {
-                        setTimeout(() => {
-                            installContainer.classList.add('show');
-                        }, 3000); // Show after 3 seconds on other devices
-                    }
-                });
-                
-                // Handle install button click
-                if (installButton) {
-                    installButton.addEventListener('click', async () => {
-                        if (!deferredPrompt) {
-                            return;
-                        }
-                        
-                        // Show the install prompt
-                        deferredPrompt.prompt();
-                        
-                        // Wait for the user to respond to the prompt
-                        const { outcome } = await deferredPrompt.userChoice;
-                        console.log(`User ${outcome} the installation`);
-                        
-                        // Clear the deferredPrompt variable
-                        deferredPrompt = null;
-                        
-                        // Hide the install button
-                        installContainer.classList.remove('show');
-                    });
-                }
-                
-                // Handle close button click
-                if (closeInstallBtn) {
-                    closeInstallBtn.addEventListener('click', () => {
-                        installContainer.classList.remove('show');
-                        
-                        // Set a cookie to remember user preference for 24 hours
-                        const d = new Date();
-                        d.setTime(d.getTime() + (24*60*60*1000));
-                        document.cookie = "pwa_install_dismissed=true; expires=" + d.toUTCString() + "; path=/";
-                    });
-                }
-                
-                // Check if user has previously dismissed the install prompt
-                function getCookie(name) {
-                    const value = `; ${document.cookie}`;
-                    const parts = value.split(`; ${name}=`);
-                    if (parts.length === 2) return parts.pop().split(';').shift();
-                }
-                
-                // Don't show install prompt if recently dismissed
-                if (getCookie('pwa_install_dismissed')) {
-                    installContainer.style.display = 'none';
-                }
-            }
-            
-            // Listen for app installed event
-            window.addEventListener('appinstalled', () => {
-                // Hide install prompt
-                installContainer.classList.remove('show');
-                console.log('App was installed successfully');
-            });
-        });
-    </script>
 </body>
 </html> 

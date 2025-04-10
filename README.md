@@ -7,7 +7,7 @@ A comprehensive digital solution designed for Alzheimer's patients and their car
 - **Task and Medication Management**: Keep track of daily tasks and medication schedules.
 - **Memory Training Exercises**: Interactive exercises to stimulate cognitive function.
 - **AI Assistant**: Personalized conversational companion that maintains context about the user.
-- **Location Tracking**: Hardcoded location set to St. Joseph College of Engineering (12.8699° N, 80.2184° E).
+- **Location Tracking**: Hardcoded location set to Dr. Ambedkar Institute Of Technology, Bengaluru, Karnataka, India
 - **Caretaker Dashboard**: Allows family members or healthcare providers to monitor patient progress.
 - **Face Recognition**: Helps identify people in photos using machine learning.
 - **Reminiscence Therapy**: Interactive timeline of patient's life events with old photos and memories.

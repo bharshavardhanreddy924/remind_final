@@ -21,7 +21,7 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": "/splash?standalone=true&source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -34,27 +34,13 @@
       "name": "Daily Tasks",
       "short_name": "Tasks",
       "description": "View your daily tasks",
-      "url": "/tasks",
-      "icons": [
-        {
-          "src": "/static/images/icons/tasks-icon-96x96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
+      "url": "/tasks"
     },
     {
       "name": "Medications",
       "short_name": "Meds",
       "description": "Manage your medications",
-      "url": "/medications",
-      "icons": [
-        {
-          "src": "/static/images/icons/meds-icon-96x96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
+      "url": "/medications"
     }
   ]
 }

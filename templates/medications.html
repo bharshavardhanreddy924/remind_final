@@ -3,76 +3,297 @@
 {% block title %}Medications{% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1 class="fw-bold">
-                <a href="{{ url_for('dashboard') }}" class="text-decoration-none">
-                    <i class="fas fa-arrow-left me-2"></i>
-                </a>
-                My Medications
-            </h1>
-            <p class="text-muted">Manage your medication schedule efficiently.</p>
-        </div>
+<!-- Header Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="fw-bold page-title">
+            <a href="{{ url_for('dashboard') }}" class="text-decoration-none back-link">
+                <i class="fas fa-arrow-left me-2"></i>
+            </a>
+            My Medications
+        </h1>
+        <p class="text-muted">Keep track of your daily medications</p>
     </div>
+</div>
 
-    <!-- Medication Schedule Card -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Medication Schedule</h5>
-        </div>
-        <div class="card-body">
-            <!-- Add Medication Form -->
-            <form method="POST" action="{{ url_for('medications') }}" class="mb-4">
-                <input type="hidden" name="action" value="add">
-                <div class="row g-3">
-                    <div class="col-md-5">
-                        <input type="text" class="form-control" name="med_name" placeholder="Medication Name" required>
-                    </div>
-                    <div class="col-md-5">
-                        <input type="text" class="form-control" name="med_time" placeholder="Time (e.g., 08:00 AM)" required>
-                    </div>
-                    <div class="col-md-2">
-                        <button class="btn btn-success w-100" type="submit">
-                            <i class="fas fa-plus"></i> Add
-                        </button>
+<!-- Add Medication Card -->
+<div class="card shadow-sm mb-4 med-card">
+    <div class="card-header">
+        <h5 class="mb-0 fw-bold">Add New Medication</h5>
+    </div>
+    <div class="card-body">
+        <!-- Add Medication Form -->
+        <form method="POST" action="{{ url_for('medications') }}">
+            <input type="hidden" name="action" value="add">
+            <div class="row g-3">
+                <div class="col-md-6 col-12 mb-3">
+                    <label for="med_name" class="form-label">Medication Name</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text"><i class="fas fa-pills"></i></span>
+                        <input type="text" class="form-control form-control-lg" id="med_name" name="med_name" placeholder="Enter medication name" required>
                     </div>
                 </div>
-                <div class="form-text mt-2">
-                    Enter time in 12-hour format (e.g., 08:00 AM, 03:30 PM).
+                <div class="col-md-6 col-12 mb-3">
+                    <label for="med_time" class="form-label">Time to Take</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                        <input type="text" class="form-control form-control-lg" id="med_time" name="med_time" placeholder="For example: 08:00 AM" required>
+                    </div>
+                    <div class="form-text mt-2">
+                        Please use 12-hour format like 08:00 AM or 03:30 PM
+                    </div>
                 </div>
-            </form>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-primary btn-lg w-100" type="submit">
+                    <i class="fas fa-plus me-2"></i> Add Medication
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
-            <!-- Medications List -->
-            {% if medications %}
-                <ul class="list-group">
-                    {% for med in medications %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-pills text-primary me-3 fa-lg"></i>
-                                <div>
-                                    <h6 class="mb-1">{{ med.name }}</h6>
-                                    <small class="text-muted">{{ med.time }}</small>
+<!-- Medication List Card -->
+<div class="card shadow-sm med-list-card">
+    <div class="card-header">
+        <h5 class="mb-0 fw-bold">Your Medication Schedule</h5>
+    </div>
+    <div class="card-body">
+        <!-- Medications List -->
+        {% if medications %}
+            <ul class="list-group med-list">
+                {% for med in medications %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center med-item p-3 mb-2">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="med-icon-container me-3">
+                                <i class="fas fa-pills text-primary med-icon"></i>
+                            </div>
+                            <div class="med-info">
+                                <h5 class="mb-1 med-name">{{ med.name }}</h5>
+                                <div class="med-time">
+                                    <i class="fas fa-clock me-1"></i> {{ med.time }}
                                 </div>
                             </div>
-                            <form method="POST" action="{{ url_for('medications') }}">
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="med_id" value="{{ med.id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <div class="alert alert-info text-center mt-3">
-                    <p class="mb-0">You don't have any medications scheduled. Add medications to keep track of your schedule.</p>
+                        </div>
+                        <form method="POST" action="{{ url_for('medications') }}" class="delete-med-form">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="med_id" value="{{ med.id }}">
+                            <button type="submit" class="btn btn-outline-danger delete-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="alert alert-info p-4 text-center">
+                <h5 class="mb-2">No medications yet</h5>
+                <p class="mb-0">You haven't added any medications to your schedule. Add your first medication using the form above.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tips Section -->
+<div class="card mt-4 tips-card">
+    <div class="card-header">
+        <h5 class="mb-0 fw-bold">Medication Tips</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="d-flex tip-item">
+                    <div class="me-3 text-primary tip-icon">
+                        <i class="fas fa-bell fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5 class="tip-title">Set Reminders</h5>
+                        <p>The app will remind you when it's time to take your medication.</p>
+                    </div>
                 </div>
-            {% endif %}
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="d-flex tip-item">
+                    <div class="me-3 text-primary tip-icon">
+                        <i class="fas fa-utensils fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5 class="tip-title">With or Without Food</h5>
+                        <p>Some medications should be taken with food, others on an empty stomach.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="d-flex tip-item">
+                    <div class="me-3 text-primary tip-icon">
+                        <i class="fas fa-water fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5 class="tip-title">Stay Hydrated</h5>
+                        <p>Always take medications with a full glass of water unless instructed otherwise.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
 </div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    /* Senior-friendly styling for medications page on Android */
+    .page-title {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .back-link {
+        font-size: 1.4rem;
+        color: var(--primary-color);
+        padding: 0.5rem;
+        margin-left: -0.5rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .med-card, .med-list-card {
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .form-label {
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .input-group-text {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        font-size: 1.2rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .form-control-lg {
+        font-size: 1.15rem;
+        height: 58px;
+    }
+    
+    .btn-lg {
+        font-size: 1.15rem;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+    }
+    
+    .form-text {
+        font-size: 1rem;
+        color: var(--gray-600);
+    }
+    
+    .med-item {
+        border-radius: 0.75rem;
+        border: 1px solid rgba(0,0,0,0.1);
+        margin-bottom: 0.75rem;
+        background-color: white;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .med-icon-container {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background-color: rgba(67, 97, 238, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .med-icon {
+        font-size: 1.5rem;
+    }
+    
+    .med-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    .med-time {
+        font-size: 1.1rem;
+        color: var(--gray-700);
+        font-weight: 500;
+    }
+    
+    .delete-btn {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        margin-left: 0.75rem;
+        background-color: rgba(230, 57, 70, 0.1);
+        border-color: transparent;
+        color: var(--danger-color);
+        font-size: 1.1rem;
+    }
+    
+    .delete-btn:hover {
+        background-color: rgba(230, 57, 70, 0.2);
+        color: var(--danger-color);
+    }
+    
+    .delete-med-form {
+        margin-bottom: 0;
+    }
+    
+    .tip-item {
+        background-color: rgba(67, 97, 238, 0.05);
+        padding: 1.25rem;
+        border-radius: 0.75rem;
+        height: 100%;
+    }
+    
+    .tip-icon {
+        margin-top: 0.25rem;
+    }
+    
+    .tip-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Mobile optimizations */
+    @media (max-width: 767.98px) {
+        .med-icon-container {
+            width: 52px;
+            height: 52px;
+        }
+        
+        .med-icon {
+            font-size: 1.7rem;
+        }
+        
+        .med-name {
+            font-size: 1.25rem;
+        }
+        
+        .med-time {
+            font-size: 1.15rem;
+        }
+        
+        .delete-btn {
+            width: 52px;
+            height: 52px;
+        }
+        
+        .tip-item {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
 {% endblock %}

@@ -4,9 +4,9 @@
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-md-8">
-        <h1 class="fw-bold">
-            <a href="{{ url_for('dashboard') }}" class="text-decoration-none">
+    <div class="col-12">
+        <h1 class="fw-bold page-title">
+            <a href="{{ url_for('dashboard') }}" class="text-decoration-none back-link">
                 <i class="fas fa-arrow-left me-2"></i>
             </a>
             My Tasks
@@ -15,42 +15,49 @@
     </div>
 </div>
 
-<div class="card">
+<div class="card task-card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Task List</h5>
+        <h5 class="mb-0 fw-bold">Add New Task</h5>
     </div>
     <div class="card-body">
         <!-- Add Task Form -->
-        <form method="POST" action="{{ url_for('tasks') }}" class="mb-4">
+        <form method="POST" action="{{ url_for('tasks') }}" class="mb-2">
             <input type="hidden" name="action" value="add">
             <div class="input-group">
-                <input type="text" class="form-control" name="task_text" placeholder="Add a new task..." required>
-                <button class="btn btn-primary" type="submit">
-                    <i class="fas fa-plus"></i> Add Task
+                <input type="text" class="form-control form-control-lg" name="task_text" placeholder="Enter your task here..." required>
+                <button class="btn btn-primary btn-lg" type="submit">
+                    <i class="fas fa-plus me-2"></i> Add
                 </button>
             </div>
         </form>
-        
+    </div>
+</div>
+
+<div class="card task-list-card">
+    <div class="card-header">
+        <h5 class="mb-0 fw-bold">Your Tasks</h5>
+    </div>
+    <div class="card-body">
         <!-- Task List -->
         {% if tasks %}
-            <div class="list-group">
+            <div class="list-group task-group">
                 {% for task in tasks %}
-                    <div class="list-group-item task-item {% if task.completed %}completed{% endif %}">
+                    <div class="list-group-item task-item {% if task.completed %}completed{% endif %} p-3 mb-2">
                         <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                <form method="POST" action="{{ url_for('tasks') }}" class="me-3">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <form method="POST" action="{{ url_for('tasks') }}" class="me-3 task-checkbox-form">
                                     <input type="hidden" name="action" value="update">
                                     <input type="hidden" name="task_index" value="{{ loop.index0 }}">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="completed" onchange="this.form.submit()" {% if task.completed %}checked{% endif %}>
+                                        <input class="form-check-input task-checkbox" type="checkbox" name="completed" onchange="this.form.submit()" {% if task.completed %}checked{% endif %}>
                                     </div>
                                 </form>
-                                <span class="task-text">{{ task.text }}</span>
+                                <span class="task-text {% if task.completed %}text-decoration-line-through text-muted{% endif %}">{{ task.text }}</span>
                             </div>
-                            <form method="POST" action="{{ url_for('tasks') }}">
+                            <form method="POST" action="{{ url_for('tasks') }}" class="delete-task-form">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="task_index" value="{{ loop.index0 }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <button type="submit" class="btn btn-outline-danger delete-btn">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>
@@ -59,50 +66,51 @@
                 {% endfor %}
             </div>
         {% else %}
-            <div class="alert alert-info">
-                <p class="mb-0">You don't have any tasks yet. Add a task to get started.</p>
+            <div class="alert alert-info p-4">
+                <h5 class="mb-2">No tasks yet</h5>
+                <p class="mb-0">You don't have any tasks. Add a task using the form above to get started.</p>
             </div>
         {% endif %}
     </div>
 </div>
 
 <!-- Tips Section -->
-<div class="card mt-4">
+<div class="card mt-4 tips-card">
     <div class="card-header">
-        <h5 class="mb-0">Task Management Tips</h5>
+        <h5 class="mb-0 fw-bold">Tips for Managing Tasks</h5>
     </div>
     <div class="card-body">
         <div class="row">
-            <div class="col-md-4 mb-3">
-                <div class="d-flex">
-                    <div class="me-3 text-primary">
+            <div class="col-md-4 mb-4">
+                <div class="d-flex tip-item">
+                    <div class="me-3 text-primary tip-icon">
                         <i class="fas fa-check-double fa-2x"></i>
                     </div>
                     <div>
-                        <h5>Prioritize</h5>
-                        <p>Focus on completing the most important tasks first.</p>
+                        <h5 class="tip-title">Prioritize Tasks</h5>
+                        <p>Focus on completing the most important tasks first each day.</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="d-flex">
-                    <div class="me-3 text-primary">
+            <div class="col-md-4 mb-4">
+                <div class="d-flex tip-item">
+                    <div class="me-3 text-primary tip-icon">
                         <i class="fas fa-clock fa-2x"></i>
                     </div>
                     <div>
-                        <h5>Set Routines</h5>
-                        <p>Establish a daily routine to help remember tasks.</p>
+                        <h5 class="tip-title">Set Daily Routines</h5>
+                        <p>Establish regular daily routines to help you remember important tasks.</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="d-flex">
-                    <div class="me-3 text-primary">
+            <div class="col-md-4 mb-4">
+                <div class="d-flex tip-item">
+                    <div class="me-3 text-primary tip-icon">
                         <i class="fas fa-trophy fa-2x"></i>
                     </div>
                     <div>
-                        <h5>Celebrate</h5>
-                        <p>Acknowledge your accomplishments as you complete tasks.</p>
+                        <h5 class="tip-title">Celebrate Progress</h5>
+                        <p>Take a moment to acknowledge and celebrate your completed tasks.</p>
                     </div>
                 </div>
             </div>
@@ -122,4 +130,135 @@
         });
     });
 </script>
+
+<style>
+    /* Senior-friendly styling for tasks page on Android */
+    .page-title {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .back-link {
+        font-size: 1.4rem;
+        color: var(--primary-color);
+        padding: 0.5rem;
+        margin-left: -0.5rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .task-item {
+        border-radius: 0.75rem;
+        border: 1px solid rgba(0,0,0,0.1);
+        margin-bottom: 0.75rem;
+        background-color: white;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .task-item.completed {
+        background-color: rgba(0,0,0,0.03);
+    }
+    
+    .task-text {
+        font-size: 1.15rem;
+        font-weight: 500;
+        flex-grow: 1;
+        padding: 0.5rem 0;
+    }
+    
+    .form-check-input.task-checkbox {
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-right: 1rem;
+        cursor: pointer;
+        border-width: 2px;
+    }
+    
+    .delete-btn {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        margin-left: 0.75rem;
+        background-color: rgba(230, 57, 70, 0.1);
+        border-color: transparent;
+        color: var(--danger-color);
+    }
+    
+    .delete-btn:hover {
+        background-color: rgba(230, 57, 70, 0.2);
+        color: var(--danger-color);
+    }
+    
+    .task-checkbox-form {
+        margin-bottom: 0;
+    }
+    
+    .delete-task-form {
+        margin-bottom: 0;
+    }
+    
+    .task-group {
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .form-control-lg {
+        font-size: 1.15rem;
+        height: 58px;
+    }
+    
+    .btn-lg {
+        height: 58px;
+        font-size: 1.15rem;
+        font-weight: 600;
+    }
+    
+    .tip-item {
+        background-color: rgba(67, 97, 238, 0.05);
+        padding: 1.25rem;
+        border-radius: 0.75rem;
+        height: 100%;
+    }
+    
+    .tip-icon {
+        margin-top: 0.25rem;
+    }
+    
+    .tip-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .tips-card .card-body {
+        padding-bottom: 0.5rem;
+    }
+    
+    /* Mobile optimizations */
+    @media (max-width: 767.98px) {
+        .delete-btn {
+            width: 48px;
+            height: 48px;
+        }
+        
+        .form-check-input.task-checkbox {
+            width: 1.75rem;
+            height: 1.75rem;
+        }
+        
+        .task-text {
+            font-size: 1.2rem;
+        }
+        
+        .tip-item {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
 {% endblock %} 

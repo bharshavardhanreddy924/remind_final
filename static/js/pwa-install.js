@@ -4,6 +4,9 @@ const installContainer = document.getElementById('install-container');
 const installButton = document.getElementById('install-button');
 let installBannerShown = false;
 
+// Make deferredPrompt accessible globally
+window.deferredPrompt = null;
+
 // Check if the app is running in standalone mode (installed PWA)
 function isRunningStandalone() {
     return (window.matchMedia('(display-mode: standalone)').matches) || 
@@ -33,12 +36,48 @@ function checkStandalone() {
 window.addEventListener('beforeinstallprompt', (e) => {
     // Prevent the mini-infobar from appearing on mobile
     e.preventDefault();
+    
     // Store the event so it can be triggered later
     deferredPrompt = e;
-    // Show the install button
-    if (installContainer && !isRunningStandalone() && !installBannerShown) {
-        installContainer.classList.remove('d-none');
-        installContainer.classList.add('d-block');
+    window.deferredPrompt = e; // Make globally accessible
+    
+    // Show install buttons/banners
+    if (!isRunningStandalone() && !installBannerShown) {
+        // Show the install container if it exists
+        if (installContainer) {
+            installContainer.classList.remove('d-none');
+            installContainer.classList.add('d-block');
+        }
+        
+        // Also show navbar install button if it exists
+        const navbarInstallBtn = document.getElementById('navbar-install-btn');
+        if (navbarInstallBtn) {
+            navbarInstallBtn.style.display = 'block';
+        }
+        
+        // Show floating install button
+        const floatingInstallBtn = document.getElementById('floating-install-btn');
+        if (floatingInstallBtn) {
+            floatingInstallBtn.style.display = 'block';
+            
+            // Add click handler
+            const button = floatingInstallBtn.querySelector('button');
+            if (button) {
+                button.addEventListener('click', () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then(choice => {
+                            if (choice.outcome === 'accepted') {
+                                console.log('User accepted the install prompt');
+                                floatingInstallBtn.style.display = 'none';
+                            }
+                            deferredPrompt = null;
+                            window.deferredPrompt = null;
+                        });
+                    }
+                });
+            }
+        }
     }
 });
 
